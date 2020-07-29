@@ -1,4 +1,4 @@
-from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d
+from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
@@ -23,7 +23,8 @@ def embedding_miniimagenet():
         EmbeddingBlock(3),
         EmbeddingBlock(64),
         EmbeddingBlock(64),
-        EmbeddingBlock(64)
+        EmbeddingBlock(64),
+        Flatten(start_dim=1)
     )
 
 
@@ -84,12 +85,12 @@ class PrototypicalNetwork(pl.LightningModule):
         batch_size = X.size(0)
         batch_supp = X[:, :self.n_s]
         batch_query = X[:, self.n_s:]
-        batch_supp = batch_supp.reshape(batch_supp.size(0) *
-                                     batch_supp.size(1) *
-                                     batch_supp.size(2),
-                                     batch_supp.size(3),
-                                     batch_supp.size(4),
-                                     batch_supp.size(5))
+        batch_supp = batch_supp.reshape(batch_supp.size(0) * #bs
+                                         batch_supp.size(1) * # n_s
+                                         batch_supp.size(2), # n
+                                         batch_supp.size(3), #channel
+                                         batch_supp.size(4), # w
+                                         batch_supp.size(5)) # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, self.n_s, self.train_n, -1)
         c = embeddings_supp.mean(dim=1).detach()

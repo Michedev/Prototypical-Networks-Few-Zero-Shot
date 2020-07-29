@@ -11,7 +11,7 @@ import fire
 
 
 
-def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64, valsize=64, force_download=False, early_stop=False, gpu='cuda:0'):
+def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64, valsize=64, force_download=False, early_stop=False, gpu=0):
     assert dataset in ['omniglot', 'miniimagenet']
     EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
     k = n_s + n_q
@@ -24,7 +24,7 @@ def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-
     )
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
                          resume_from_checkpoint=EMBEDDING_PATH if EMBEDDING_PATH.exists() else None,
-                         early_stop_callback=early_stop, gpus=gpu)
+                         early_stop_callback=early_stop, gpus=gpu, auto_select_gpus=True)
     model = PrototypicalNetwork(dataset, train_n, test_n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
     trainer.fit(model)
     trainer.test()
