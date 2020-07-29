@@ -3,7 +3,7 @@ import torch
 
 
 def calc_loss(model, n: int, n_s: int, batch):
-    batch_size = batch_supp.size(0)
+    batch_size = batch.size(0)
     batch_supp = batch[: :n_s]
     batch_query = batch[: n_s:]
     batch_supp = batch_supp.view(batch_supp.size(0) * 

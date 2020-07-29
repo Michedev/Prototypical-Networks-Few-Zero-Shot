@@ -82,28 +82,20 @@ class MetaLearningDataset(torch.utils.data.Dataset):
 
 class OmniglotMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation, length=None):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, k, random_rotation, image_size=[1, 28, 28], length=length)
+    def __init__(self, class_pool, n, n_s, n_q, length=None):
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, n_s, n_q, random_rotation=True, image_size=[1, 28, 28], length=length)
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, k, random_rotation, length=None):
-        if random_rotation:
-            print('warning: random rotation will be set to False because not used in MiniImageNet Dataset')
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, k, False, image_size=[3, 84, 84], length=length)
+    def __init__(self, class_pool, n, n_s, n_q, length=None):
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, n_s, n_q, False, image_size=[3, 84, 84], length=length)
 
 
 
-def load_and_transform(name_image, rotation, image_size):
-    assert len(image_size) == 3
-    img = Image.open(name_image)
-    if rotation != 0:
-        img = img.rotate(rotation)
-    return preprocess_image(img)
 
 
-def get_train_test_classes(classes: list, test_classes_file: str, train_classes_file: str, numtrainclasses):
+def get_train_test_classes(classes: list, test_classes_file: Path, train_classes_file: Path, numtrainclasses):
     if not train_classes_file.exists() or not test_classes_file.exists():
         index_classes = np.arange(len(classes))
         np.random.shuffle(index_classes)
