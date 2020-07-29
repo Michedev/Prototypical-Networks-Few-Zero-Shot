@@ -1,13 +1,19 @@
 from dataset import MiniImageNetMetaLearning, OmniglotMetaLearning, \
-                    get_train_test_classes, train_folders_miniimagenet, \
-                    val_folders_miniimagenet, test_folders_miniimagenet, \
+                    get_train_test_classes, train_classes_miniimagenet, \
+                    val_classes_miniimagenet, test_classes_miniimagenet, \
                     pull_data_miniimagenet, pull_data_omniglot
-from _train import train
-from paths import ROOT, OMNIGLOTFOLDER
+from model import PrototypicalNetwork
+from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER, EMBEDDING_PATH
+import pytorch_lightning as pl
+from pytorch_lightning import seed_everything
+from pytorch_lightning.callbacks import ModelCheckpoint, ProgressBar
+import fire
 
 
-def main(dataset, n, n_s, n_q, epochs=1000, force_download=False):
+
+def main(dataset, n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64, valsize=64, force_download=False, early_stop=False):
     assert dataset in ['omniglot', 'miniimagenet']
+    EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
     k = n_s + n_q
     if dataset == 'omniglot':
         pull_data_omniglot(force_download)
@@ -18,8 +24,15 @@ def main(dataset, n, n_s, n_q, epochs=1000, force_download=False):
             get_train_test_classes(classes, test_classes_file, train_classes_file, 1200)
     else:
         pull_data_miniimagenet(force_download)
-        train_classes = train_folders_miniimagenet()
-        val_classes = val_folders_miniimagenet()
-        test_classes = test_folders_miniimagenet()
-        train_data = MiniImageNetMetaLearning(train_data)
-    
+    checkpoint = ModelCheckpoint(
+        WEIGHTSFOLDER / 'best_model.pth', verbose=True, mode='min',
+    )
+    trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
+                         resume_from_checkpoint=EMBEDDING_PATH,
+                         early_stop_callback=early_stop)
+    model = PrototypicalNetwork(dataset, n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
+    trainer.fit(model)
+    trainer.test()
+
+if __name__ == '__main__':
+    fire.Fire(main)

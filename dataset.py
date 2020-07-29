@@ -151,11 +151,11 @@ def pull_data_miniimagenet(force):
             os.system(f'tar -xvf {tarfile} --directory {MINIIMAGENETFOLDER}')
             tarfile.remove()
 
-def train_folders_miniimagenet():
+def train_classes_miniimagenet():
     return (MINIIMAGENETFOLDER / 'train').dirs()
 
-def val_folders_miniimagenet():
+def val_classes_miniimagenet():
     return (MINIIMAGENETFOLDER / 'val').dirs()
 
-def test_folders_miniimagenet():        
+def test_classes_miniimagenet():
     return (MINIIMAGENETFOLDER / 'test').dirs()

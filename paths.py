@@ -8,3 +8,4 @@ WEIGHTSFOLDER = ROOT / 'model_weights'
 
 if not WEIGHTSFOLDER.exists():
     WEIGHTSFOLDER.mkdir()
+EMBEDDING_PATH = WEIGHTSFOLDER / 'embedding.pth'
