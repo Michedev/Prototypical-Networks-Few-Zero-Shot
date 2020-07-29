@@ -23,7 +23,7 @@ def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-
         WEIGHTSFOLDER / 'best_model.pth', verbose=True, mode='min',
     )
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
-                         resume_from_checkpoint=EMBEDDING_PATH,
+                         resume_from_checkpoint=EMBEDDING_PATH if EMBEDDING_PATH.exists() else None,
                          early_stop_callback=early_stop)
     model = PrototypicalNetwork(dataset, train_n, test_n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
     trainer.fit(model)

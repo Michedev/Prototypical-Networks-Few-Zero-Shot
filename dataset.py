@@ -20,6 +20,8 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.class_pool = class_pool
         self.n = n
         self.k = n_s + n_q
+        self.n_s = n_s
+        self.n_q = n_q
         self.t = n * self.k
         self.ohe = torch.eye(n)
         self.image_size = list(image_size)
@@ -48,7 +50,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         t = n * self.k
         X = torch.zeros([self.k, n] + self.image_size)
         y = torch.zeros(t, n)
-        image_names_batch, rotations, X, y = self.fit_train_task(X, y, sampled_classes)
+        image_names_batch, rotations, X, y = self.fit_train_task(X, y, sampled_classes, self.n_s)
         return X, y
 
     def shuffle(self):
