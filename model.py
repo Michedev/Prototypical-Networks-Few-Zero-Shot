@@ -149,7 +149,7 @@ class PrototypicalNetwork(pl.LightningModule):
         acc = self.calc_accuracy(c, query)
         return {'test_loss': loss, 'test_acc': acc}
 
-    def test_end(self, outputs):
+    def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
         avg_acc = torch.stack([x['test_acc'] for x in outputs]).mean()
         tensorboard_logs = {'test_loss': avg_loss, 'test_acc': avg_acc}
