@@ -84,23 +84,23 @@ class PrototypicalNetwork(pl.LightningModule):
         batch_size = X.size(0)
         batch_supp = X[:, :self.n_s]
         batch_query = X[:, self.n_s:]
-        batch_supp = batch_supp.view(batch_supp.size(0) *
+        batch_supp = batch_supp.reshape(batch_supp.size(0) *
                                      batch_supp.size(1) *
                                      batch_supp.size(2),
                                      batch_supp.size(3),
                                      batch_supp.size(4),
                                      batch_supp.size(5))
         embeddings_supp = self.embedding_nn(batch_supp)
-        embeddings_supp = embeddings_supp.view(batch_size, self.n_s, self.train_n, -1)
+        embeddings_supp = embeddings_supp.reshape(batch_size, self.n_s, self.train_n, -1)
         c = embeddings_supp.mean(dim=1).detach()
-        batch_query = batch_query.view(batch_query.size(0) *
+        batch_query = batch_query.reshape(batch_query.size(0) *
                                        batch_query.size(1) *
                                        batch_query.size(2),
                                        batch_query.size(3),
                                        batch_query.size(4),
                                        batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
-        embeddings_query = embeddings_query.view(batch_size, self.n_q, self.train_n, -1)
+        embeddings_query = embeddings_query.reshape(batch_size, self.n_q, self.train_n, -1)
         return c, embeddings_query
 
     def training_step(self, batch):
@@ -112,7 +112,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'loss': loss, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
-        y_true = torch.arange(self.train_n).view(1, self.train_n).to(self.device)
+        y_true = torch.arange(self.train_n).reshape(1, self.train_n).to(self.device)
         distancecs = (c.unsqueeze(1) - query).pow(2).sum(-1).sqrt()
         distancecs = distancecs.argmax(dim=1)
         acc = (y_true == distancecs).float().mean()
@@ -120,7 +120,7 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def calc_loss(self, c, query):
         loss = 0.0
-        for i in range(c.view(0)):
+        for i in range(c.size(0)):
             for i_q in range(self.n_q):
                 for i_cl in range(self.train_n):
                     loss += self.loss_f(query[i, i_q, i_cl], c[i, i_cl])
