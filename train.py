@@ -11,17 +11,12 @@ import fire
 
 
 
-def main(dataset, n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64, valsize=64, force_download=False, early_stop=False):
+def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64, valsize=64, force_download=False, early_stop=False):
     assert dataset in ['omniglot', 'miniimagenet']
     EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
     k = n_s + n_q
     if dataset == 'omniglot':
-        pull_data_omniglot(force_download)
-        classes = list(OMNIGLOTFOLDER.glob('*/*/'))
-        train_classes_file = ROOT / f'train_classes_{dataset}.txt'
-        test_classes_file = ROOT / f'test_classes_{dataset}.txt'
-        train_classes, test_classes = \
-            get_train_test_classes(classes, test_classes_file, train_classes_file, 1200)
+        raise NotImplementedError("Omniglot not yet implemented")
     else:
         pull_data_miniimagenet(force_download)
     checkpoint = ModelCheckpoint(
@@ -30,7 +25,7 @@ def main(dataset, n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=1
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
                          resume_from_checkpoint=EMBEDDING_PATH,
                          early_stop_callback=early_stop)
-    model = PrototypicalNetwork(dataset, n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
+    model = PrototypicalNetwork(dataset, train_n, test_n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
     trainer.fit(model)
     trainer.test()
 

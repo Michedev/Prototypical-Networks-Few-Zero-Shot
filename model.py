@@ -58,7 +58,7 @@ class ModelSaver:
 
 class PrototypicalNetwork(pl.LightningModule):
 
-    def __init__(self, dataset: str, n: int, n_s: int, n_q: int, batch_size=32, lr=10e-3, train_length=None,
+    def __init__(self, dataset: str, train_n: int, test_n: int, n_s: int, n_q: int, batch_size=32, lr=10e-3, train_length=None,
                  val_length=None,
                  test_length=None):
         super().__init__()
@@ -68,7 +68,8 @@ class PrototypicalNetwork(pl.LightningModule):
             self.embedding_nn = embedding_omniglot()
         else:
             self.embedding_nn = embedding_miniimagenet()
-        self.n = n
+        self.train_n = train_n
+        self.test_n = test_n
         self.n_s = n_s
         self.n_q = n_q
         self.loss_f = torch.nn.MSELoss(reduction='none')
@@ -90,7 +91,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                      batch_supp.size(4),
                                      batch_supp.size(5))
         embeddings_supp = self.embedding_nn(batch_supp)
-        embeddings_supp = embeddings_supp.view(batch_size, self.n_s, self.n, -1)
+        embeddings_supp = embeddings_supp.view(batch_size, self.n_s, self.train_n, -1)
         c = embeddings_supp.mean(dim=1).detach()
         batch_query = batch_query.view(batch_query.size(0) *
                                        batch_query.size(1) *
@@ -99,7 +100,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                        batch_query.size(4),
                                        batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
-        embeddings_query = embeddings_query.view(batch_size, self.n_q, self.n, -1)
+        embeddings_query = embeddings_query.view(batch_size, self.n_q, self.train_n, -1)
         return c, embeddings_query
 
     def training_step(self, batch):
@@ -110,7 +111,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'loss': loss, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
-        y_true = torch.arange(self.n).view(1, self.n).to(self.device)
+        y_true = torch.arange(self.train_n).view(1, self.train_n).to(self.device)
         distancecs = (c.unsqueeze(1) - query).pow(2).sum(-1).sqrt()
         distancecs = distancecs.argmax(dim=1)
         acc = (y_true == distancecs).float().mean()
@@ -120,10 +121,10 @@ class PrototypicalNetwork(pl.LightningModule):
         loss = 0.0
         for i in range(c.view(0)):
             for i_q in range(self.n_q):
-                for i_cl in range(self.n):
+                for i_cl in range(self.train_n):
                     loss += self.loss_f(query[i, i_q, i_cl], c[i, i_cl])
                     other_loss = 0.0
-                    for j_cl in range(self.n):
+                    for j_cl in range(self.train_n):
                         if i_cl != j_cl:
                             other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl]))
                     loss += other_loss.log()
@@ -156,7 +157,7 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def train_dataloader(self) -> DataLoader:
         if self.dataset == 'miniimagenet':
-            train_data = MiniImageNetMetaLearning(train_classes_miniimagenet(), self.n, self.n_s, self.n_q,
+            train_data = MiniImageNetMetaLearning(train_classes_miniimagenet(), self.train_n, self.n_s, self.n_q,
                                                   self.train_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
@@ -164,14 +165,14 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def val_dataloader(self):
         if self.dataset == 'miniimagenet':
-            val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.n, self.n_s, self.n_q, self.val_length)
+            val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.train_n, self.n_s, self.n_q, self.val_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
         return DataLoader(val_data, batch_size=self.batch_size, shuffle=True, num_workers=cpu_count())
 
     def test_dataloader(self) -> DataLoader:
         if self.dataset == 'miniimagenet':
-            test_data = MiniImageNetMetaLearning(test_classes_miniimagenet(), self.n, self.n_s, self.n_q,
+            test_data = MiniImageNetMetaLearning(test_classes_miniimagenet(), self.test_n, self.n_s, self.n_q,
                                                  self.test_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
