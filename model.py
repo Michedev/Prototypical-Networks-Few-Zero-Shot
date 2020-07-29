@@ -165,7 +165,7 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def val_dataloader(self):
         if self.dataset == 'miniimagenet':
-            val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.train_n, self.n_s, self.n_q, self.val_length)
+            val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.test_n, self.n_s, self.n_q, self.val_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
         return DataLoader(val_data, batch_size=self.batch_size, shuffle=False, num_workers=cpu_count())
