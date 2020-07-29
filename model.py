@@ -168,7 +168,7 @@ class PrototypicalNetwork(pl.LightningModule):
             val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.train_n, self.n_s, self.n_q, self.val_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
-        return DataLoader(val_data, batch_size=self.batch_size, shuffle=True, num_workers=cpu_count())
+        return DataLoader(val_data, batch_size=self.batch_size, shuffle=False, num_workers=cpu_count())
 
     def test_dataloader(self) -> DataLoader:
         if self.dataset == 'miniimagenet':
@@ -176,7 +176,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                                  self.test_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
-        return DataLoader(test_data, batch_size=self.batch_size, shuffle=True, num_workers=cpu_count())
+        return DataLoader(test_data, batch_size=self.batch_size, shuffle=False, num_workers=cpu_count())
 
     def configure_optimizers(self):
         opt = torch.optim.Adam(self.parameters(), lr=self.lr)
