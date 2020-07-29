@@ -104,10 +104,11 @@ class PrototypicalNetwork(pl.LightningModule):
         return c, embeddings_query
 
     def training_step(self, batch):
-        c, query = self(batch)
+        X,y = batch
+        c, query = self(X)
         loss = self.calc_loss(c, query)
         tensorboard_logs = {'train_loss': loss}
-        self.half_lr.step()
+        self.half_lr.step(None)
         return {'loss': loss, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
@@ -134,7 +135,8 @@ class PrototypicalNetwork(pl.LightningModule):
         torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
 
     def validation_step(self, batch, batch_nb):
-        c, query = self(batch)
+        X,y = batch
+        c, query = self(X)
         loss = self.calc_loss(c, query)
         return {'val_loss': loss}
 
@@ -144,7 +146,8 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_nb):
-        c, query = self(batch)
+        X,y = batch
+        c, query = self(X)
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
         return {'test_loss': loss, 'test_acc': acc}

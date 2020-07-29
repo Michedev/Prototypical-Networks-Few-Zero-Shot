@@ -94,9 +94,6 @@ class MiniImageNetMetaLearning(MetaLearningDataset):
         super(MiniImageNetMetaLearning, self).__init__(class_pool, n, n_s, n_q, False, image_size=[3, 84, 84], length=length)
 
 
-
-
-
 def get_train_test_classes(classes: list, test_classes_file: Path, train_classes_file: Path, numtrainclasses):
     if not train_classes_file.exists() or not test_classes_file.exists():
         index_classes = np.arange(len(classes))
