@@ -106,6 +106,7 @@ class PrototypicalNetwork(pl.LightningModule):
         c, query = self(batch)
         loss = self.calc_loss(c, query)
         tensorboard_logs = {'train_loss': loss}
+        self.half_lr.step()
         return {'loss': loss, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
@@ -177,5 +178,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return DataLoader(test_data, batch_size=self.batch_size, shuffle=True, num_workers=cpu_count())
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        opt = torch.optim.Adam(self.parameters(), lr=self.lr)
+        self.half_lr = torch.optim.lr_scheduler.StepLR(opt, 2000, 0.5)
+        return opt
 
