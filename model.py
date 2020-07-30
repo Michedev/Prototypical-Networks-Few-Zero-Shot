@@ -65,7 +65,7 @@ class PrototypicalNetwork(pl.LightningModule):
         super().__init__()
         self.lr = lr
         assert dataset in ['miniimagenet', 'omniglot']
-        if dataset == 'miniimagenet':
+        if dataset == 'omniglot':
             self.embedding_nn = embedding_omniglot()
         else:
             self.embedding_nn = embedding_miniimagenet()
