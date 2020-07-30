@@ -114,7 +114,6 @@ class PrototypicalNetwork(pl.LightningModule):
         c, query = self(X)
         loss = self.calc_loss(c, query)
         tensorboard_logs = {'train_loss': loss}
-        self.half_lr.step(None)
         return {'loss': loss, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
@@ -166,8 +165,8 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def train_dataloader(self) -> DataLoader:
         if self.dataset == 'miniimagenet':
-            train_data = MiniImageNetMetaLearning(train_classes_miniimagenet(), self.train_n, self.n_s, self.n_q,
-                                                  self.train_length)
+            train_data = MiniImageNetMetaLearning(train_classes_miniimagenet(), self.train_n,
+                                                  self.n_s, self.n_q, self.train_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
         return DataLoader(train_data, batch_size=self.batch_size, shuffle=True, num_workers=cpu_count())
@@ -189,6 +188,6 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def configure_optimizers(self):
         opt = torch.optim.Adam(self.parameters(), lr=self.lr)
-        self.half_lr = torch.optim.lr_scheduler.StepLR(opt, 2000, 0.5)
-        return opt
+        half_lr = torch.optim.lr_scheduler.StepLR(opt, 2000, 0.5)
+        return [opt], [half_lr]
 
