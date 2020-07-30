@@ -37,6 +37,7 @@ def embedding_omniglot():
         Flatten(start_dim=1)
     )
 
+
 class ModelSaver:
 
     def __init__(self, model, savepath: Path, mode='min'):
@@ -64,7 +65,8 @@ class ModelSaver:
 
 class PrototypicalNetwork(pl.LightningModule):
 
-    def __init__(self, dataset: str, train_n: int, test_n: int, n_s: int, n_q: int, batch_size=32, lr=10e-3, train_length=None,
+    def __init__(self, dataset: str, train_n: int, test_n: int, n_s: int, n_q: int, batch_size=32, lr=10e-3,
+                 train_length=None,
                  val_length=None,
                  test_length=None):
         super().__init__()
@@ -84,33 +86,33 @@ class PrototypicalNetwork(pl.LightningModule):
         self.train_length = train_length
         self.val_length = val_length
         self.test_length = test_length
-        EMBEDDING_PATH.replace('embedding', 'embedding_'+dataset)
+        EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
 
     def forward(self, X):
         batch_size = X.size(0)
         batch_supp = X[:, :self.n_s]
         batch_query = X[:, self.n_s:]
-        batch_supp = batch_supp.reshape(batch_supp.size(0) * #bs
-                                         batch_supp.size(1) * # n_s
-                                         batch_supp.size(2), # n
-                                         batch_supp.size(3), #channel
-                                         batch_supp.size(4), # w
-                                         batch_supp.size(5)) # h
+        batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
+                                        batch_supp.size(1) *  # n_s
+                                        batch_supp.size(2),  # n
+                                        batch_supp.size(3),  # channel
+                                        batch_supp.size(4),  # w
+                                        batch_supp.size(5))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, self.n_s, self.train_n, -1)
         c = embeddings_supp.mean(dim=1).detach()
         batch_query = batch_query.reshape(batch_query.size(0) *
-                                       batch_query.size(1) *
-                                       batch_query.size(2),
-                                       batch_query.size(3),
-                                       batch_query.size(4),
-                                       batch_query.size(5))
+                                          batch_query.size(1) *
+                                          batch_query.size(2),
+                                          batch_query.size(3),
+                                          batch_query.size(4),
+                                          batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, self.n_q, self.train_n, -1)
         return c, embeddings_query
 
     def training_step(self, batch, batch_bn):
-        X,y = batch
+        X, y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
         tensorboard_logs = {'train_loss': loss}
@@ -137,10 +139,10 @@ class PrototypicalNetwork(pl.LightningModule):
         return loss
 
     def training_epoch_end(self, outputs):
-        torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
+        torch.save(self, EMBEDDING_PATH)
 
     def validation_step(self, batch, batch_nb):
-        X,y = batch
+        X, y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
         return {'val_loss': loss}
@@ -151,7 +153,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_nb):
-        X,y = batch
+        X, y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
@@ -173,7 +175,8 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def val_dataloader(self):
         if self.dataset == 'miniimagenet':
-            val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.test_n, self.n_s, self.n_q, self.val_length)
+            val_data = MiniImageNetMetaLearning(val_classes_miniimagenet(), self.test_n, self.n_s, self.n_q,
+                                                self.val_length)
         else:
             raise NotImplementedError("Omniglot data not implemented")
         return DataLoader(val_data, batch_size=self.batch_size, shuffle=False, num_workers=cpu_count())
@@ -190,4 +193,3 @@ class PrototypicalNetwork(pl.LightningModule):
         opt = torch.optim.Adam(self.parameters(), lr=self.lr)
         half_lr = torch.optim.lr_scheduler.StepLR(opt, 2000, 0.5)
         return [opt], [half_lr]
-

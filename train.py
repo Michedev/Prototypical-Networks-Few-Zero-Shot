@@ -1,7 +1,7 @@
 from dataset import MiniImageNetMetaLearning, OmniglotMetaLearning, \
-                    get_train_test_classes, train_classes_miniimagenet, \
-                    val_classes_miniimagenet, test_classes_miniimagenet, \
-                    pull_data_miniimagenet, pull_data_omniglot
+    get_train_test_classes, train_classes_miniimagenet, \
+    val_classes_miniimagenet, test_classes_miniimagenet, \
+    pull_data_miniimagenet, pull_data_omniglot
 from model import PrototypicalNetwork
 from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER, EMBEDDING_PATH
 import pytorch_lightning as pl
@@ -10,8 +10,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, ProgressBar
 import fire
 
 
-
-def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64, valsize=64, force_download=False, early_stop=False, gpu=0):
+def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64,
+         valsize=64, force_download=False, early_stop=False, gpu=0):
     assert dataset in ['omniglot', 'miniimagenet']
     EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
     k = n_s + n_q
@@ -28,6 +28,7 @@ def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-
     model = PrototypicalNetwork(dataset, train_n, test_n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
     trainer.fit(model)
     trainer.test()
+
 
 if __name__ == '__main__':
     fire.Fire(main)

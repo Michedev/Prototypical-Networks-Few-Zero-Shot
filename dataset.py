@@ -14,6 +14,7 @@ from torchvision import transforms
 import os
 from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 
+
 class MetaLearningDataset(torch.utils.data.Dataset):
 
     def __init__(self, class_pool, n, n_s, n_q, random_rotation, image_size, length=None):
@@ -29,17 +30,16 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.remaining_classes = []
         self.length = length
         self.preprocess_image = transforms.Compose([
-                transforms.Resize(image_size[1:]),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
+            transforms.Resize(image_size[1:]),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
         if self.length is None:
             assert (len(self.class_pool) // self.n - 1) > 0
 
-
     def __len__(self):
         return len(self.class_pool) // self.n - 1 if self.length is None else self.length
-        
+
     def __getitem__(self, i):
         if len(self.remaining_classes) < self.n:
             self.remaining_classes = self.class_pool[:]
@@ -80,18 +80,18 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         return self.preprocess_image(img)
 
 
-
-
 class OmniglotMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, n_s, n_q, length=None):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, n_s, n_q, random_rotation=True, image_size=[1, 28, 28], length=length)
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, n_s, n_q, random_rotation=True,
+                                                   image_size=[1, 28, 28], length=length)
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
     def __init__(self, class_pool, n, n_s, n_q, length=None):
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, n_s, n_q, False, image_size=[3, 84, 84], length=length)
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, n_s, n_q, False, image_size=[3, 84, 84],
+                                                       length=length)
 
 
 def get_train_test_classes(classes: list, test_classes_file: Path, train_classes_file: Path, numtrainclasses):
@@ -150,11 +150,14 @@ def pull_data_miniimagenet(force):
             os.system(f'tar -xvf {tarfile} --directory {MINIIMAGENETFOLDER}')
             tarfile.remove()
 
+
 def train_classes_miniimagenet():
     return (MINIIMAGENETFOLDER / 'train').dirs()
 
+
 def val_classes_miniimagenet():
     return (MINIIMAGENETFOLDER / 'val').dirs()
+
 
 def test_classes_miniimagenet():
     return (MINIIMAGENETFOLDER / 'test').dirs()
