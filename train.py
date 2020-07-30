@@ -8,6 +8,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint, ProgressBar
 import fire
+import torch
 
 
 def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-3, trainsize=10000, testsize=64,
@@ -23,9 +24,10 @@ def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-
         WEIGHTSFOLDER / 'best_model.pth', verbose=True, mode='min',
     )
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
-                         resume_from_checkpoint=EMBEDDING_PATH if EMBEDDING_PATH.exists() else None,
                          early_stop_callback=early_stop, gpus=gpu, auto_select_gpus=True)
     model = PrototypicalNetwork(dataset, train_n, test_n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
+    if EMBEDDING_PATH.exists():
+        model.embedding_nn.load_state_dict(torch.load(EMBEDDING_PATH))
     trainer.fit(model)
     trainer.test()
 

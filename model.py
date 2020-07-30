@@ -139,7 +139,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return loss
 
     def training_epoch_end(self, outputs):
-        torch.save(self, EMBEDDING_PATH)
+        torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
 
     def validation_step(self, batch, batch_nb):
         X, y = batch
