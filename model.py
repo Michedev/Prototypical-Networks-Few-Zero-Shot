@@ -124,11 +124,11 @@ class PrototypicalNetwork(pl.LightningModule):
         for i in range(c.size(0)):
             for i_q in range(self.n_q):
                 for i_cl in range(self.train_n):
-                    loss += self.loss_f(query[i, i_q, i_cl], c[i, i_cl])
+                    loss += self.loss_f(query[i, i_q, i_cl], c[i, i_cl]).sum()
                     other_loss = 0.0
                     for j_cl in range(self.train_n):
                         if i_cl != j_cl:
-                            other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl]))
+                            other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl])).sum()
                     loss += other_loss.log()
         return loss
 
