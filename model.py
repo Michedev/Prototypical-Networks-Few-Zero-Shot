@@ -148,7 +148,7 @@ class PrototypicalNetwork(pl.LightningModule):
         X, y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
-        acc = self.calc_acc(c, query)
+        acc = self.calc_accuracy(c, query)
         log = {'loss/val_epoch': loss, 'accuracy/val_epoch': acc}
         return {'val_loss': loss, 'val_acc': acc, 'log': log}
 
