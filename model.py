@@ -141,18 +141,20 @@ class PrototypicalNetwork(pl.LightningModule):
     def training_epoch_end(self, outputs):
         torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
         avg_loss = sum(o['loss'] for o in outputs) / len(outputs)
-        log = {'train_loss': avg_loss}
+        log = {'loss/epoch_train': avg_loss}
         return {'train_loss': avg_loss, 'log': log}
 
     def validation_step(self, batch, batch_nb):
         X, y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
-        return {'val_loss': loss}
+        acc = self.calc_acc(c, query)
+        log = {'loss/val_epoch': loss, 'accuracy/val_epoch': acc}
+        return {'val_loss': loss, 'val_acc': acc, 'log': log}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        tensorboard_logs = {'val_loss': avg_loss}
+        tensorboard_logs = {'loss/epoch_val': avg_loss}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_nb):
@@ -165,7 +167,7 @@ class PrototypicalNetwork(pl.LightningModule):
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
         avg_acc = torch.stack([x['test_acc'] for x in outputs]).mean()
-        tensorboard_logs = {'test_loss': avg_loss, 'test_acc': avg_acc}
+        tensorboard_logs = {'loss/test_epoch': avg_loss, 'accuracy/test_epoch': avg_acc}
         return {'test_loss': avg_loss, 'log': tensorboard_logs}
 
     def train_dataloader(self) -> DataLoader:
