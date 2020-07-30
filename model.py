@@ -140,6 +140,9 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def training_epoch_end(self, outputs):
         torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
+        avg_loss = sum(o['loss'] for o in outputs) / len(outputs)
+        log = {'train_loss': avg_loss}
+        return {'train_loss': avg_loss, 'log': log}
 
     def validation_step(self, batch, batch_nb):
         X, y = batch
