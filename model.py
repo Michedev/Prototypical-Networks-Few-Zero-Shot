@@ -115,8 +115,10 @@ class PrototypicalNetwork(pl.LightningModule):
         X, y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
-        tensorboard_logs = {'train_loss': loss}
-        return {'loss': loss, 'log': tensorboard_logs}
+        with torch.no_grad():
+            acc = self.calc_accuracy(c.detach(), query.detach())
+        tensorboard_logs = {'loss/batch_train': loss, 'accuracy/batch_train': acc}
+        return {'loss': loss, 'acc': acc, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
         y_true = torch.arange(self.train_n).reshape(1, self.train_n).to(self.device)
@@ -141,8 +143,9 @@ class PrototypicalNetwork(pl.LightningModule):
     def training_epoch_end(self, outputs):
         torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
         avg_loss = sum(o['loss'] for o in outputs) / len(outputs)
-        log = {'loss/epoch_train': avg_loss}
-        return {'train_loss': avg_loss, 'log': log}
+        avg_acc = sum(o['acc'] for o in outputs) / len(outputs)
+        log = {'loss/epoch_train': avg_loss, 'accuracy/epoch_train': avg_acc}
+        return {'train_loss': avg_loss, 'train_acc': avg_acc, 'log': log}
 
     def validation_step(self, batch, batch_nb):
         X, y = batch
@@ -154,7 +157,9 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-        tensorboard_logs = {'loss/epoch_val': avg_loss}
+        avg_acc = torch.stack([x['val_acc'] for x in outputs]).mean()
+
+        tensorboard_logs = {'loss/epoch_val': avg_loss, 'accuracy/epoch_val': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_nb):
