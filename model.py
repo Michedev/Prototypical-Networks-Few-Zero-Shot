@@ -104,7 +104,7 @@ class PrototypicalNetwork(pl.LightningModule):
         embeddings_query = embeddings_query.reshape(batch_size, self.n_q, self.train_n, -1)
         return c, embeddings_query
 
-    def training_step(self, batch):
+    def training_step(self, batch, batch_bn):
         X,y = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
