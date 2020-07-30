@@ -11,10 +11,10 @@ from paths import EMBEDDING_PATH
 
 def EmbeddingBlock(input_channels):
     return Sequential(
-        Conv2d(input_channels, 64, kernel_size=3),
+        Conv2d(input_channels, 64, kernel_size=3, padding=1),
         BatchNorm2d(64),
         ReLU(),
-        MaxPool2d(2)
+        MaxPool2d(2, ceil_mode=True)
     )
 
 
@@ -29,8 +29,13 @@ def embedding_miniimagenet():
 
 
 def embedding_omniglot():
-    return EmbeddingBlock(3)
-
+    return Sequential(
+        EmbeddingBlock(3),
+        EmbeddingBlock(64),
+        EmbeddingBlock(64),
+        EmbeddingBlock(64),
+        Flatten(start_dim=1)
+    )
 
 class ModelSaver:
 
