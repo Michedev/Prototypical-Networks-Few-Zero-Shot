@@ -76,24 +76,25 @@ class PrototypicalNetwork(pl.LightningModule):
         self.loss_f = torch.nn.MSELoss(reduction='none')
 
     def forward(self, X):
-        batch_size = X.size(0)
-        batch_supp = X[:, :self.supp_size]
-        batch_query = X[:, self.supp_size:]
-        batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
-                                        batch_supp.size(1) *  # n_s
-                                        batch_supp.size(2),  # n
-                                        batch_supp.size(3),  # channel
-                                        batch_supp.size(4),  # w
-                                        batch_supp.size(5))  # h
-        embeddings_supp = self.embedding_nn(batch_supp)
-        embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
-        c = embeddings_supp.mean(dim=1).detach()
-        batch_query = batch_query.reshape(batch_query.size(0) *
-                                          batch_query.size(1) *
-                                          batch_query.size(2),
-                                          batch_query.size(3),
-                                          batch_query.size(4),
-                                          batch_query.size(5))
+        with torch.no_grad():
+            batch_size = X.size(0)
+            batch_supp = X[:, :self.supp_size]
+            batch_query = X[:, self.supp_size:]
+            batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
+                                            batch_supp.size(1) *  # n_s
+                                            batch_supp.size(2),  # n
+                                            batch_supp.size(3),  # channel
+                                            batch_supp.size(4),  # w
+                                            batch_supp.size(5))  # h
+            embeddings_supp = self.embedding_nn(batch_supp)
+            embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
+            c = embeddings_supp.mean(dim=1).detach()
+            batch_query = batch_query.reshape(batch_query.size(0) *
+                                              batch_query.size(1) *
+                                              batch_query.size(2),
+                                              batch_query.size(3),
+                                              batch_query.size(4),
+                                              batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, self.query_size, self.train_n, -1)
         return c, embeddings_query
