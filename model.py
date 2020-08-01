@@ -74,7 +74,6 @@ class PrototypicalNetwork(pl.LightningModule):
         self.supp_size = supp_size
         self.query_size = query_size
         self.loss_f = torch.nn.MSELoss(reduction='none')
-        EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
 
     def forward(self, X):
         batch_size = X.size(0)
@@ -109,7 +108,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'loss': loss, 'acc': acc, 'log': tensorboard_logs}
 
     def calc_accuracy(self, c, query):
-        y_true = torch.arange(self.train_n).reshape(1, self.train_n).to(self.device)
+        y_true = torch.arange(query.size(2)).reshape(1, query.size(2)).to(self.device)
         distancecs = (c.unsqueeze(1) - query).pow(2).sum(-1).sqrt()
         distancecs = distancecs.argmax(dim=1)
         acc = (y_true == distancecs).float().mean()
@@ -119,10 +118,10 @@ class PrototypicalNetwork(pl.LightningModule):
         loss = 0.0
         for i in range(c.size(0)):
             for i_q in range(self.query_size):
-                for i_cl in range(self.train_n):
+                for i_cl in range(query.size(2)):
                     loss += self.loss_f(query[i, i_q, i_cl], c[i, i_cl]).sum()
                     other_loss = 0.0
-                    for j_cl in range(self.train_n):
+                    for j_cl in range(query.size(2)):
                         if i_cl != j_cl:
                             other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl]).sum())
                     loss += other_loss.log()

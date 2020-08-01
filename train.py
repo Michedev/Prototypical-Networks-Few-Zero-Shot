@@ -19,13 +19,14 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
         pull_data_miniimagenet(force_download)
         datamodule = MiniImageNetDataLoader(batch_size, train_n, val_n, test_n, n_s, n_q, trainsize, valsize, testsize)
     checkpoint = ModelCheckpoint(
-        WEIGHTSFOLDER / 'best_model.pth', verbose=True, mode='min',
+        WEIGHTSFOLDER / 'best_model.ckpt', verbose=True, mode='min', prefix=dataset
     )
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
                          early_stop_callback=early_stop, gpus=gpu, auto_select_gpus=True)
-    model = PrototypicalNetwork(train_n, test_n, n_s, n_q, lr)
-    if EMBEDDING_PATH.exists():
-        model.embedding_nn.load_state_dict(torch.load(EMBEDDING_PATH))
+    if not (WEIGHTSFOLDER / 'best_model.ckpt').exists():
+        model = PrototypicalNetwork(train_n, test_n, n_s, n_q, lr)
+    else:
+        model = PrototypicalNetwork.load_from_checkpoint(WEIGHTSFOLDER / 'best_model.ckpt')
     trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
     trainer.test(model, datamodule.test_dataloader())
 
