@@ -28,7 +28,7 @@ def main(dataset, train_n, test_n, n_s, n_q, epochs=1000, batch_size=32, lr=10e-
     model = PrototypicalNetwork(dataset, train_n, test_n, n_s, n_q, batch_size, lr, trainsize, valsize, testsize)
     if EMBEDDING_PATH.exists():
         model.embedding_nn.load_state_dict(torch.load(EMBEDDING_PATH))
-    trainer.fit(model)
+    trainer.fit(model, )
     trainer.test()
 
 
