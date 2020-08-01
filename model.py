@@ -65,20 +65,15 @@ class ModelSaver:
 
 class PrototypicalNetwork(pl.LightningModule):
 
-    def __init__(self, dataset: str, train_n: int, test_n: int, supp_size: int, query_size: int, lr=10e-3):
+    def __init__(self, train_n: int, test_n: int, supp_size: int, query_size: int, lr=10e-3):
         super().__init__()
         self.lr = lr
-        assert dataset in ['miniimagenet', 'omniglot']
-        if dataset == 'omniglot':
-            self.embedding_nn = embedding_omniglot()
-        else:
-            self.embedding_nn = embedding_miniimagenet()
+        self.embedding_nn = embedding_omniglot()
         self.train_n = train_n
         self.test_n = test_n
         self.supp_size = supp_size
         self.query_size = query_size
         self.loss_f = torch.nn.MSELoss(reduction='none')
-        self.dataset = dataset
         EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
 
     def forward(self, X):
@@ -129,7 +124,7 @@ class PrototypicalNetwork(pl.LightningModule):
                     other_loss = 0.0
                     for j_cl in range(self.train_n):
                         if i_cl != j_cl:
-                            other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl])).sum()
+                            other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl]).sum())
                     loss += other_loss.log()
         return loss
 

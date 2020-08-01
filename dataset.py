@@ -16,6 +16,7 @@ from torchvision import transforms
 import os
 from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 
+
 class MetaLearningDataset(torch.utils.data.Dataset):
 
     def __init__(self, class_pool, n, n_s, n_q, random_rotation, image_size, length=None):
@@ -167,7 +168,7 @@ def test_classes_miniimagenet():
 class MiniImageNetDataLoader:
 
     def __init__(self, batch_size: int, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int,
-                        train_len: int, val_len: int, test_len: int, cpus: int = None):
+                 train_len: int, val_len: int, test_len: int, cpus: int = None):
         self.train_len = train_len
         self.val_len = val_len
         self.test_len = test_len
