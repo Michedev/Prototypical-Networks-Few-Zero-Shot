@@ -88,7 +88,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                             batch_supp.size(5))  # h
             embeddings_supp = self.embedding_nn(batch_supp)
             embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
-            c = embeddings_supp.mean(dim=1).detach()
+            c = embeddings_supp.mean(dim=1, keepdim=True).detach()
             batch_query = batch_query.reshape(batch_query.size(0) *
                                               batch_query.size(1) *
                                               batch_query.size(2),
@@ -116,16 +116,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return acc
 
     def calc_loss(self, c, query):
-        loss = 0.0
-        for i in range(c.size(0)):
-            for i_q in range(self.query_size):
-                for i_cl in range(query.size(2)):
-                    loss += self.loss_f(query[i, i_q, i_cl], c[i, i_cl]).sum()
-                    other_loss = 0.0
-                    for j_cl in range(query.size(2)):
-                        if i_cl != j_cl:
-                            other_loss += torch.exp(-self.loss_f(query[i, i_q, i_cl], c[i, j_cl]).sum())
-                    loss += other_loss.log()
+        loss = self.loss_f(query, c).mean(dim=0).sum()
         return loss
 
     def training_epoch_end(self, outputs):
