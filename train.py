@@ -23,7 +23,7 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
     )
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
                          early_stop_callback=early_stop, gpus=gpu,
-                         auto_select_gpus=True, precision=16)
+                         auto_select_gpus=True)
     if not (WEIGHTSFOLDER / 'best_model.ckpt').exists():
         model = PrototypicalNetwork(train_n, test_n, n_s, n_q, lr)
     else:
