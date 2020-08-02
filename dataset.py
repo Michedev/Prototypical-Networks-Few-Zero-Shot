@@ -50,21 +50,19 @@ class MetaLearningDataset(torch.utils.data.Dataset):
             self.remaining_classes.remove(s_class)
         n = len(sampled_classes)
         t = n * self.k
-        X = torch.zeros([self.k, n] + self.image_size, dtype=torch.float16)
-        y = torch.zeros(t, n)
-        image_names_batch, rotations, X, y = self.fit_train_task(X, y, sampled_classes, self.n_s)
+        X = torch.zeros([self.k, n] + self.image_size, dtype=torch.float32)
+        image_names_batch, rotations, X= self.fit_train_task(X, sampled_classes, self.n_s)
         return X, y
 
     def shuffle(self):
         shuffle(self.class_pool)
 
-    def fit_train_task(self, X, y, classes, n_s):
+    def fit_train_task(self, X, classes, n_s):
         image_names_batch = []
         rotations = {}
         for i_class, class_name in enumerate(classes):
             name_images = sample(class_name.files(), self.k)
             image_names_batch += name_images
-            y[i_class * self.k: (i_class + 1) * self.k, :] = self.ohe[[i_class] * self.k]
             rotation = 0 if not self.random_rotation else 90 * randint(0, 3)
             rotations[i_class] = rotation
             for i_img, name_image in enumerate(name_images):
@@ -73,7 +71,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
                     img = img.unsqueeze(-1)
                 X[i_img, i_class, :, :, :] = img
                 del img
-        return image_names_batch, rotations, X, y
+        return image_names_batch, rotations, X
 
     def load_and_transform(self, name_image, rotation):
         img = Image.open(name_image).convert('RGB')

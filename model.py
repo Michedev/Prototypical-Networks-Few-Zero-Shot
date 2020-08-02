@@ -1,4 +1,4 @@
-from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten,LocalResponseNorm
+from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten,GroupNorm
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
@@ -12,9 +12,9 @@ from paths import EMBEDDING_PATH
 def EmbeddingBlock(input_channels):
     return Sequential(
         Conv2d(input_channels, 64, kernel_size=3, padding=1),
-        LocalResponseNorm(4),
+        GroupNorm(4, 64),
         ReLU(),
-        MaxPool2d(2, ceil_mode=True)
+        MaxPool2d(2, ceil_mode=False)
     )
 
 

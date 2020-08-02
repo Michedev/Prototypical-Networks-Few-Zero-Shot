@@ -28,7 +28,6 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
         model = PrototypicalNetwork(train_n, test_n, n_s, n_q, lr)
     else:
         model = PrototypicalNetwork.load_from_checkpoint(WEIGHTSFOLDER / 'best_model.ckpt')
-    model = model.half()
     trainer.fit(model, datamodule.train_dataloader(), datamodule.val_dataloader())
     trainer.test(model, datamodule.test_dataloader())
 
