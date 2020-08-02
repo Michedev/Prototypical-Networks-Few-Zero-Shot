@@ -52,7 +52,7 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         t = n * self.k
         X = torch.zeros([self.k, n] + self.image_size, dtype=torch.float32)
         image_names_batch, rotations, X = self.fit_train_task(X, sampled_classes, self.n_s)
-        return X,
+        return X
 
     def shuffle(self):
         shuffle(self.class_pool)
