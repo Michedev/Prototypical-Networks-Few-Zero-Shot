@@ -1,4 +1,4 @@
-from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten
+from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten,LocalResponseNorm
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
@@ -12,7 +12,7 @@ from paths import EMBEDDING_PATH
 def EmbeddingBlock(input_channels):
     return Sequential(
         Conv2d(input_channels, 64, kernel_size=3, padding=1),
-        BatchNorm2d(64),
+        LocalResponseNorm(4),
         ReLU(),
         MaxPool2d(2, ceil_mode=True)
     )
@@ -68,7 +68,7 @@ class PrototypicalNetwork(pl.LightningModule):
     def __init__(self, train_n: int, test_n: int, supp_size: int, query_size: int, lr=10e-3):
         super().__init__()
         self.lr = lr
-        self.embedding_nn = embedding_omniglot()
+        self.embedding_nn = embedding_miniimagenet()
         self.train_n = train_n
         self.test_n = test_n
         self.supp_size = supp_size
@@ -76,25 +76,24 @@ class PrototypicalNetwork(pl.LightningModule):
         self.loss_f = torch.nn.MSELoss(reduction='none')
 
     def forward(self, X):
-        with torch.no_grad():
-            batch_size = X.size(0)
-            batch_supp = X[:, :self.supp_size]
-            batch_query = X[:, self.supp_size:]
-            batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
-                                            batch_supp.size(1) *  # n_s
-                                            batch_supp.size(2),  # n
-                                            batch_supp.size(3),  # channel
-                                            batch_supp.size(4),  # w
-                                            batch_supp.size(5))  # h
-            embeddings_supp = self.embedding_nn(batch_supp)
-            embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
-            c = embeddings_supp.mean(dim=1, keepdim=True).detach()
-            batch_query = batch_query.reshape(batch_query.size(0) *
-                                              batch_query.size(1) *
-                                              batch_query.size(2),
-                                              batch_query.size(3),
-                                              batch_query.size(4),
-                                              batch_query.size(5))
+        batch_size = X.size(0)
+        batch_supp = X[:, :self.supp_size]
+        batch_query = X[:, self.supp_size:]
+        batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
+                                        batch_supp.size(1) *  # n_s
+                                        batch_supp.size(2),  # n
+                                        batch_supp.size(3),  # channel
+                                        batch_supp.size(4),  # w
+                                        batch_supp.size(5))  # h
+        embeddings_supp = self.embedding_nn(batch_supp)
+        embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
+        c = embeddings_supp.mean(dim=1, keepdim=True).detach()
+        batch_query = batch_query.reshape(batch_query.size(0) *
+                                          batch_query.size(1) *
+                                          batch_query.size(2),
+                                          batch_query.size(3),
+                                          batch_query.size(4),
+                                          batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, self.query_size, self.train_n, -1)
         return c, embeddings_query
@@ -110,9 +109,9 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def calc_accuracy(self, c, query):
         y_true = torch.arange(query.size(2)).reshape(1, query.size(2)).to(self.device)
-        distancecs = (c.unsqueeze(1) - query).pow(2).sum(-1).sqrt()
-        distancecs = distancecs.argmax(dim=1)
-        acc = (y_true == distancecs).float().mean()
+        distances = (c.unsqueeze(1) - query).pow(2).sum(-1).sqrt()
+        distances = distances.argmax(dim=1)
+        acc = (y_true == distances).float().mean()
         return acc
 
     def calc_loss(self, c, query):
