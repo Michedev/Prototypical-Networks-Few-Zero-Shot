@@ -99,7 +99,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return c, embeddings_query
 
     def training_step(self, batch, batch_bn):
-        X, y = batch
+        X = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
         with torch.no_grad():
@@ -126,7 +126,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'train_loss': avg_loss, 'train_acc': avg_acc, 'log': log}
 
     def validation_step(self, batch, batch_nb):
-        X, y = batch
+        X = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
@@ -141,7 +141,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_nb):
-        X, y = batch
+        X = batch
         c, query = self(X)
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
