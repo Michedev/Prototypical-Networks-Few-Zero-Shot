@@ -114,8 +114,19 @@ class PrototypicalNetwork(pl.LightningModule):
         acc = (y_true == distances).float().mean()
         return acc
 
-    def calc_loss(self, c, query):
+    def calc_loss(self, c: torch.Tensor, query):
         loss = self.loss_f(query, c).mean(dim=0).sum()
+        sum_neg_distance = 0.0
+        for i_batch in range(c.shape[0]):
+            for i_query in range(self.query_size):
+                for i_class in range(self.train_n):
+                    for j_class in range(self.train_n):
+                        if i_class != j_class:
+                            neg_distance = -self.loss_f(query[i_batch, i_query, i_class, :], c[i_batch, 0, j_class, :]).mean(dim=0).sum()
+                            neg_distance = neg_distance.exp()
+                            sum_neg_distance += neg_distance
+        loss += sum_neg_distance.log()
+        loss /= self.query_size * self.train_n
         return loss
 
     def training_epoch_end(self, outputs):
