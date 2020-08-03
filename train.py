@@ -21,6 +21,8 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
     checkpoint = ModelCheckpoint(
         WEIGHTSFOLDER / 'best_model.ckpt', verbose=True, mode='min', prefix=dataset
     )
+    if early_stop:
+        early_stop = pl.callbacks.EarlyStopping()
     trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
                          early_stop_callback=early_stop, gpus=gpu,
                          auto_select_gpus=True)
