@@ -105,7 +105,7 @@ class PrototypicalNetwork(pl.LightningModule):
         with torch.no_grad():
             acc = self.calc_accuracy(c.detach(), query.detach())
         tensorboard_logs = {'loss/batch_train': loss, 'accuracy/batch_train': acc}
-        pbar = {'batch_train_acc': acc, 'batch_train_loss': loss}
+        pbar = {'acc': acc}
         return {'loss': loss, 'acc': acc, 'log': tensorboard_logs, 'progress_bar': pbar}
 
     def calc_accuracy(self, c, query):
@@ -116,7 +116,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return acc
 
     def calc_loss(self, c: torch.Tensor, query: torch.Tensor):
-        loss = self.loss_f(query, c).mean(dim=0).sum()
+        loss = self.loss_f(query, c).mean(dim=[0, 1, 2]).sum()
         sum_neg_distance = 0.0
         for i_batch in range(c.shape[0]):
             for i_query in range(self.query_size):
@@ -125,9 +125,9 @@ class PrototypicalNetwork(pl.LightningModule):
                         if i_class != j_class:
                             neg_distance = -self.loss_f(query[i_batch, i_query, i_class, :], c[i_batch, 0, j_class, :]).sum()
                             neg_distance = neg_distance.exp()
+                            neg_distance /= self.train_n * self.query_size
                             sum_neg_distance += neg_distance
         loss += sum_neg_distance.log()
-        loss /= self.query_size * self.train_n
         return loss
 
     def training_epoch_end(self, outputs):
@@ -143,7 +143,7 @@ class PrototypicalNetwork(pl.LightningModule):
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
         log = {'loss/val_epoch': loss, 'accuracy/val_epoch': acc}
-        pbar = {'batch_val_acc': acc, 'batch_val_loss': loss}
+        pbar = {'acc': acc}
         return {'val_loss': loss, 'val_acc': acc, 'log': log, 'progress_bar': pbar}
 
     def validation_epoch_end(self, outputs):
