@@ -105,7 +105,8 @@ class PrototypicalNetwork(pl.LightningModule):
         with torch.no_grad():
             acc = self.calc_accuracy(c.detach(), query.detach())
         tensorboard_logs = {'loss/batch_train': loss, 'accuracy/batch_train': acc}
-        return {'loss': loss, 'acc': acc, 'log': tensorboard_logs}
+        pbar = {'batch_train_acc': acc, 'batch_train_loss': loss}
+        return {'loss': loss, 'acc': acc, 'log': tensorboard_logs, 'progress_bar': pbar}
 
     def calc_accuracy(self, c, query):
         y_true = torch.arange(query.size(2)).reshape(1, query.size(2)).to(self.device)
@@ -142,7 +143,8 @@ class PrototypicalNetwork(pl.LightningModule):
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
         log = {'loss/val_epoch': loss, 'accuracy/val_epoch': acc}
-        return {'val_loss': loss, 'val_acc': acc, 'log': log}
+        pbar = {'batch_val_acc': acc, 'batch_val_loss': loss}
+        return {'val_loss': loss, 'val_acc': acc, 'log': log, 'progress_bar': pbar}
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
