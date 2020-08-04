@@ -43,13 +43,8 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         return len(self.class_pool) // self.n - 1 if self.length is None else self.length
 
     def __getitem__(self, i):
-        if len(self.remaining_classes) < self.n:
-            self.remaining_classes = self.class_pool[:]
-        sampled_classes = sample(self.remaining_classes, self.n)
-        for s_class in sampled_classes:
-            self.remaining_classes.remove(s_class)
+        sampled_classes = sample(self.class_pool, self.n)
         n = len(sampled_classes)
-        t = n * self.k
         X = torch.zeros([self.k, n] + self.image_size, dtype=torch.float32)
         image_names_batch, rotations, X = self.fit_train_task(X, sampled_classes, self.n_s)
         return X
