@@ -77,6 +77,7 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def forward(self, X):
         batch_size = X.size(0)
+        num_classes = X.size(2)
         batch_supp = X[:, :self.supp_size]
         batch_query = X[:, self.supp_size:]
         batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
@@ -86,7 +87,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                         batch_supp.size(4),  # w
                                         batch_supp.size(5))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
-        embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
+        embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, num_classes, -1)
         c = embeddings_supp.mean(dim=1, keepdim=True).detach()
         batch_query = batch_query.reshape(batch_query.size(0) *
                                           batch_query.size(1) *
@@ -95,7 +96,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                           batch_query.size(4),
                                           batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
-        embeddings_query = embeddings_query.reshape(batch_size, self.query_size, self.train_n, -1)
+        embeddings_query = embeddings_query.reshape(batch_size, self.query_size, num_classes, -1)
         return c, embeddings_query
 
     def training_step(self, batch, batch_bn):
