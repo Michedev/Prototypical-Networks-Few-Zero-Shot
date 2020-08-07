@@ -110,11 +110,19 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'loss': loss, 'acc': acc, 'log': tensorboard_logs, 'progress_bar': pbar}
 
     def calc_accuracy(self, c, query):
-        y_true = torch.arange(query.size(2)).reshape(1, query.size(2)).to(self.device)
-        distances = (c - query).pow(2).sum(-1).sqrt()
-        distances = distances.argmax(dim=1)
-        acc = (y_true == distances).float().mean()
-        return acc
+        num_classes = query.size(2)
+        distance_matrix = torch.zeros(num_classes)
+        tot_acc = 0.0
+        for i_batch in range(query.size(0)):
+            for i_query in range(self.query_size):
+                for i_class in range(num_classes):
+                    for j_class in range(num_classes):
+                        distance = c[i_batch, 0, j_class] - query[i_batch, i_query, i_class]
+                        distance = distance.pow(2).sum().sqrt()
+                        distance_matrix[j_class] = distance
+                    tot_acc += (distance_matrix.argmax() == i_class).float()
+        tot_acc /= query.size(0) * self.query_size * num_classes
+        return tot_acc
 
     def calc_loss(self, c: torch.Tensor, query: torch.Tensor):
         loss = self.loss_f(query, c).mean(dim=[0, 1, 2]).sum()
