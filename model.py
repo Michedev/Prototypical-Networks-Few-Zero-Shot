@@ -141,7 +141,6 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def validation_step(self, batch, batch_nb):
         X = batch
-        print(X.shape)
         c, query = self(X)
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
