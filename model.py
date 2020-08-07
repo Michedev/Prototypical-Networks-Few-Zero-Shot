@@ -110,7 +110,7 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def calc_accuracy(self, c, query):
         y_true = torch.arange(query.size(2)).reshape(1, query.size(2)).to(self.device)
-        distances = (c.unsqueeze(1) - query).pow(2).sum(-1).sqrt()
+        distances = (c - query).pow(2).sum(-1).sqrt()
         distances = distances.argmax(dim=1)
         acc = (y_true == distances).float().mean()
         return acc
@@ -121,7 +121,7 @@ class PrototypicalNetwork(pl.LightningModule):
         for i_batch in range(c.shape[0]):
             for i_query in range(self.query_size):
                 for i_class in range(self.train_n):
-                    for j_class in range(self.train_n):
+                    for j_class in range(i_class, self.train_n):
                         if i_class != j_class:
                             neg_distance = -self.loss_f(query[i_batch, i_query, i_class, :], c[i_batch, 0, j_class, :]).sum()
                             neg_distance = neg_distance.exp() / (self.train_n * self.query_size) + 10e-4
