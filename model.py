@@ -117,15 +117,14 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def calc_loss(self, c: torch.Tensor, query: torch.Tensor):
         loss = self.loss_f(query, c).mean(dim=[0, 1, 2]).sum()
-        sum_neg_distance = 0.0
+        sum_neg_distance = torch.zeros([]).to(self.device)
         for i_batch in range(c.shape[0]):
             for i_query in range(self.query_size):
                 for i_class in range(self.train_n):
                     for j_class in range(self.train_n):
                         if i_class != j_class:
                             neg_distance = -self.loss_f(query[i_batch, i_query, i_class, :], c[i_batch, 0, j_class, :]).sum()
-                            neg_distance = neg_distance.exp()
-                            neg_distance /= self.train_n * self.query_size
+                            neg_distance = neg_distance.exp() / (self.train_n * self.query_size) + 10e-4
                             sum_neg_distance += neg_distance
         loss += sum_neg_distance.log()
         return loss
@@ -134,11 +133,13 @@ class PrototypicalNetwork(pl.LightningModule):
         torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
         avg_loss = sum(o['loss'] for o in outputs) / len(outputs)
         avg_acc = sum(o['acc'] for o in outputs) / len(outputs)
+        print('\nTrain epoch loss:', avg_loss.item(), 'Train epoch accuracy:', avg_acc.item())
         log = {'loss/epoch_train': avg_loss, 'accuracy/epoch_train': avg_acc}
         return {'train_loss': avg_loss, 'train_acc': avg_acc, 'log': log}
 
     def validation_step(self, batch, batch_nb):
         X = batch
+        print(X.shape)
         c, query = self(X)
         loss = self.calc_loss(c, query)
         acc = self.calc_accuracy(c, query)
@@ -149,7 +150,7 @@ class PrototypicalNetwork(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
         avg_acc = torch.stack([x['val_acc'] for x in outputs]).mean()
-
+        print('Val epoch loss:', avg_loss.item(), 'Val epoch accuracy:', avg_acc.item())
         tensorboard_logs = {'loss/epoch_val': avg_loss, 'accuracy/epoch_val': avg_acc}
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
@@ -163,7 +164,8 @@ class PrototypicalNetwork(pl.LightningModule):
     def test_epoch_end(self, outputs):
         avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
         avg_acc = torch.stack([x['test_acc'] for x in outputs]).mean()
-        tensorboard_logs = {'loss/test_epoch': avg_loss, 'accuracy/test_epoch': avg_acc}
+        print('Test epoch loss:', avg_loss, 'Test epoch accuracy:', avg_acc)
+        tensorboard_logs = {'loss/test_epoch': avg_loss.item(), 'accuracy/test_epoch': avg_acc.item()}
         return {'test_loss': avg_loss, 'log': tensorboard_logs}
 
     def configure_optimizers(self):

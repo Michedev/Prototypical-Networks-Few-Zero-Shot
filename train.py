@@ -19,7 +19,8 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
         pull_data_miniimagenet(force_download)
         datamodule = MiniImageNetDataLoader(batch_size, train_n, val_n, test_n, n_s, n_q, trainsize, valsize, testsize)
     checkpoint = ModelCheckpoint(
-        WEIGHTSFOLDER / 'best_model.ckpt', verbose=True, mode='min', prefix=dataset
+        WEIGHTSFOLDER / 'best_model', verbose=True,
+        mode='min', prefix=''
     )
     if early_stop:
         early_stop = pl.callbacks.EarlyStopping()
