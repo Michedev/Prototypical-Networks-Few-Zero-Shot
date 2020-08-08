@@ -34,7 +34,6 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         self.preprocess_image = transforms.Compose([
             transforms.Resize(image_size[1:]),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         if self.length is None:
             assert (len(self.class_pool) // self.n - 1) > 0
