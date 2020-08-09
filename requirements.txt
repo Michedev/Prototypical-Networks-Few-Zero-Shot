@@ -1,0 +1,9 @@
+torch==1.5.1
+pytorch_lightning==0.8.5
+torchmeta==1.4.6
+torchvision==0.6.1
+numpy==1.18.5
+fire==0.3.1
+path.py==12.5.0
+Pillow==7.2.0
+wget==3.2
