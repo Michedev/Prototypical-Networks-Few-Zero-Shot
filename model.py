@@ -76,7 +76,7 @@ class PrototypicalNetwork(pl.LightningModule):
             self.distance_f = lambda x, y: (x - y).norm(2, dim=1)
 
     def forward(self, batch_supp, y_supp, batch_query):
-        batch_size, k_supp = batch_supp.shape[:1]
+        batch_size, k_supp = batch_supp.shape[:2]
         k_query = batch_query.size(1)
         num_classes = y_supp[0].max() + 1
         batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
