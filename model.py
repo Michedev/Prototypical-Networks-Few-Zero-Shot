@@ -1,11 +1,8 @@
-from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten,GroupNorm
 import pytorch_lightning as pl
 import torch
-from torch.utils.data import DataLoader
 from path import Path
-from dataset import MiniImageNetMetaLearning, train_classes_miniimagenet, \
-    val_classes_miniimagenet, test_classes_miniimagenet
-from multiprocessing import cpu_count
+from torch.nn import Conv2d, ReLU, Sequential, MaxPool2d, Flatten, GroupNorm
+
 from paths import EMBEDDING_PATH
 
 

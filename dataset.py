@@ -1,25 +1,9 @@
-import zipfile
-from multiprocessing import cpu_count
-from typing import List
-import pytorch_lightning as pl
-import numpy as np
-import torch
-from random import sample, randint, shuffle
-
-import torchvision
-from path import Path
-import wget
-from skimage import io, transform
 from torch.utils.data import DataLoader
-from torchvision.datasets.utils import download_file_from_google_drive
-from PIL import Image
-from torchvision import transforms
-import os
-from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER, DATAFOLDER
-import torchmeta
-from torchvision import transforms
 from torchmeta.datasets.helpers import miniimagenet, omniglot
 from torchmeta.utils.data import BatchMetaDataLoader
+from torchvision import transforms
+
+from paths import DATAFOLDER
 
 
 def miniimagenet_transforms():
