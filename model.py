@@ -80,18 +80,18 @@ class PrototypicalNetwork(pl.LightningModule):
         k_query = batch_query.size(1)
         num_classes = y_supp[0].max() + 1
         batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
-                                        batch_supp.size(1) *  # k
+                                        batch_supp.size(1),  # k
                                         batch_supp.size(2),  # channel
                                         batch_supp.size(3),  # w
                                         batch_supp.size(4))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, num_classes, k_supp // num_classes, -1)
         c = embeddings_supp.mean(dim=2, keepdim=True).detach()
-        batch_query = batch_query.reshape(batch_query.size(0) *
-                                          batch_query.size(1) *
-                                          batch_query.size(2),
-                                          batch_query.size(3),
-                                          batch_query.size(4))
+        batch_query = batch_query.reshape(batch_query.size(0) * # bs
+                                          batch_query.size(1),  # k
+                                          batch_query.size(2),  # channel
+                                          batch_query.size(3),  # w
+                                          batch_query.size(4))  # h
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, num_classes, k_query // num_classes, -1)
         return c, embeddings_query
