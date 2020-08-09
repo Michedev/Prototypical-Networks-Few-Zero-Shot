@@ -70,6 +70,10 @@ class MiniImageNetDataLoader:
         self.train_data = get_train_miniimagenet(self.train_n, self.n_s, self.n_q)
         self.val_data = get_val_miniimagenet(self.val_n, self.n_s, self.n_q)
         self.test_data = get_test_miniimagenet(self.test_n, self.n_s, self.n_q)
+        self.train_data.__len__ = lambda: self.train_len
+        self.val_data.__len__ = lambda: self.val_len
+        self.test_data.__len__ = lambda: self.test_len
+
 
     def train_dataloader(self) -> DataLoader:
         return BatchMetaDataLoader(self.train_data, batch_size=self.batch_size, shuffle=True, num_workers=self.cpus)
