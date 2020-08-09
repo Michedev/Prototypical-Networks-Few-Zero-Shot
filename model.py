@@ -65,77 +65,75 @@ class ModelSaver:
 
 class PrototypicalNetwork(pl.LightningModule):
 
-    def __init__(self, train_n: int, test_n: int, supp_size: int, query_size: int, lr=10e-3):
+    def __init__(self, train_n: int, test_n: int, supp_size: int, query_size: int,
+                 lr: float = 10e-3, distance_f: str = 'euclidean'):
         super().__init__()
+        self.distance_f = distance_f
         self.lr = lr
         self.embedding_nn = embedding_miniimagenet()
         self.train_n = train_n
         self.test_n = test_n
         self.supp_size = supp_size
         self.query_size = query_size
-        self.loss_f = torch.nn.MSELoss(reduction='none')
+        if distance_f == 'euclidean':
+            self.distance_f = lambda x, y: (x - y).norm(2, dim=1)
 
-    def forward(self, X):
-        batch_size = X.size(0)
-        num_classes = X.size(2)
-        batch_supp = X[:, :self.supp_size]
-        batch_query = X[:, self.supp_size:]
+    def forward(self, batch_supp, y_supp, batch_query):
+        batch_size, k_supp = batch_supp.shape[:1]
+        k_query = batch_query.size(1)
+        num_classes = y_supp[0].max() + 1
         batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
-                                        batch_supp.size(1) *  # n_s
-                                        batch_supp.size(2),  # n
-                                        batch_supp.size(3),  # channel
-                                        batch_supp.size(4),  # w
-                                        batch_supp.size(5))  # h
+                                        batch_supp.size(1) *  # k
+                                        batch_supp.size(2),  # channel
+                                        batch_supp.size(3),  # w
+                                        batch_supp.size(4))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
-        embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, num_classes, -1)
-        c = embeddings_supp.mean(dim=1, keepdim=True).detach()
+        embeddings_supp = embeddings_supp.reshape(batch_size, num_classes, k_supp // num_classes, -1)
+        c = embeddings_supp.mean(dim=2, keepdim=True).detach()
         batch_query = batch_query.reshape(batch_query.size(0) *
                                           batch_query.size(1) *
                                           batch_query.size(2),
                                           batch_query.size(3),
-                                          batch_query.size(4),
-                                          batch_query.size(5))
+                                          batch_query.size(4))
         embeddings_query = self.embedding_nn(batch_query)
-        embeddings_query = embeddings_query.reshape(batch_size, self.query_size, num_classes, -1)
+        embeddings_query = embeddings_query.reshape(batch_size, num_classes, k_query // num_classes, -1)
         return c, embeddings_query
 
+    def find_closest(self, c, query):
+        return self.distance_f(query, c).argmax(1)
+
     def training_step(self, batch, batch_bn):
-        X = batch
-        c, query = self(X)
+        train_inputs, train_targets = batch["train"]
+        test_inputs, test_targets = batch["test"]
+
+        c, query = self(train_inputs, train_targets, test_inputs)
         loss = self.calc_loss(c, query)
         with torch.no_grad():
-            acc = self.calc_accuracy(c.detach(), query.detach())
+            acc = self.calc_accuracy(c, query, test_targets)
         tensorboard_logs = {'loss/batch_train': loss, 'accuracy/batch_train': acc}
         pbar = {'acc': acc}
         return {'loss': loss, 'acc': acc, 'log': tensorboard_logs, 'progress_bar': pbar}
 
-    def calc_accuracy(self, c, query):
-        num_classes = query.size(2)
-        distance_matrix = torch.zeros(num_classes)
-        tot_acc = 0.0
-        for i_batch in range(query.size(0)):
-            for i_query in range(self.query_size):
-                for i_class in range(num_classes):
-                    for j_class in range(num_classes):
-                        distance = c[i_batch, 0, j_class] - query[i_batch, i_query, i_class]
-                        distance = distance.pow(2).sum().sqrt()
-                        distance_matrix[j_class] = distance
-                    tot_acc += (distance_matrix.argmax() == i_class).float()
-        tot_acc /= query.size(0) * self.query_size * num_classes
-        return tot_acc
+    def calc_accuracy(self, c, query, y_query):
+        yhat = self.find_closest(c, query)
+        acc = (yhat == y_query).float().mean()
+        return acc
 
     def calc_loss(self, c: torch.Tensor, query: torch.Tensor):
-        loss = self.loss_f(query, c).mean(dim=[0, 1, 2]).sum()
-        num_classes = query.size(2)
+        loss = torch.zeros([]).to(self.device)
+        num_classes = query.size(1)
         sum_neg_distance = torch.zeros([]).to(self.device)
         for i_batch in range(c.shape[0]):
             for i_query in range(self.query_size):
                 for i_class in range(num_classes):
                     for j_class in range(i_class, num_classes):
                         if i_class != j_class:
-                            neg_distance = -self.loss_f(query[i_batch, i_query, i_class, :], c[i_batch, 0, j_class, :]).sum()
+                            neg_distance = -self.distance_f(query[i_batch, i_class, i_query],
+                                                            c[i_batch, j_class, 0])
                             neg_distance = neg_distance.exp() / (num_classes * self.query_size) + 10e-4
                             sum_neg_distance += neg_distance
+                        else:
+                            loss += self.distance_f(query[i_batch, i_class, i_query], c[i_batch, i_class, 0])
         loss += sum_neg_distance.log()
         return loss
 
@@ -143,15 +141,18 @@ class PrototypicalNetwork(pl.LightningModule):
         torch.save(self.embedding_nn.state_dict(), EMBEDDING_PATH)
         avg_loss = sum(o['loss'] for o in outputs) / len(outputs)
         avg_acc = sum(o['acc'] for o in outputs) / len(outputs)
-        print('\nTrain epoch loss:', avg_loss.item(), 'Train epoch accuracy:', avg_acc.item())
+        print('\nTrain epoch loss:', avg_loss.item(),
+              'Train epoch accuracy:', avg_acc.item())
         log = {'loss/epoch_train': avg_loss, 'accuracy/epoch_train': avg_acc}
         return {'train_loss': avg_loss, 'train_acc': avg_acc, 'log': log}
 
     def validation_step(self, batch, batch_nb):
-        X = batch
-        c, query = self(X)
+        train_inputs, train_targets = batch["train"]
+        test_inputs, test_targets = batch["test"]
+
+        c, query = self(train_inputs, train_targets, test_inputs)
         loss = self.calc_loss(c, query)
-        acc = self.calc_accuracy(c, query)
+        acc = self.calc_accuracy(c, query, test_targets)
         log = {'loss/val_epoch': loss, 'accuracy/val_epoch': acc}
         pbar = {'acc': acc}
         return {'val_loss': loss, 'val_acc': acc, 'log': log, 'progress_bar': pbar}
@@ -164,10 +165,12 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
     def test_step(self, batch, batch_nb):
-        X = batch
-        c, query = self(X)
+        train_inputs, train_targets = batch["train"]
+        test_inputs, test_targets = batch["test"]
+
+        c, query = self(train_inputs, train_targets, test_inputs)
         loss = self.calc_loss(c, query)
-        acc = self.calc_accuracy(c, query)
+        acc = self.calc_accuracy(c, query, test_targets)
         return {'test_loss': loss, 'test_acc': acc}
 
     def test_epoch_end(self, outputs):

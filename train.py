@@ -1,4 +1,4 @@
-from dataset import MiniImageNetDataLoader, pull_data_miniimagenet
+from dataset import MiniImageNetDataLoader
 from model import PrototypicalNetwork
 from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER, EMBEDDING_PATH
 import pytorch_lightning as pl
