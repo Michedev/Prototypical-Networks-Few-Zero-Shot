@@ -73,7 +73,7 @@ class PrototypicalNetwork(pl.LightningModule):
         self.supp_size = supp_size
         self.query_size = query_size
         if distance_f == 'euclidean':
-            self.distance_f = lambda x, y: (x - y).norm(2, dim=1)
+            self.distance_f = lambda x, y: (x - y).norm(2, dim=-1)
 
     def forward(self, batch_supp, y_supp, batch_query):
         batch_size, k_supp = batch_supp.shape[:2]
