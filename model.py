@@ -97,7 +97,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return c, embeddings_query
 
     def find_closest(self, c, query):
-        return self.distance_f(query, c).argmax(1)
+        return self.distance_f(query, c).unsqueeze(-1).argmax(-1)
 
     def training_step(self, batch, batch_bn):
         train_inputs, train_targets = batch["train"]
@@ -112,7 +112,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return {'loss': loss, 'acc': acc, 'log': tensorboard_logs, 'progress_bar': pbar}
 
     def calc_accuracy(self, c, query, y_query):
-        yhat = self.find_closest(c, query)
+        yhat = self.find_closest(c, query).flatten(1)
         acc = (yhat == y_query).float().mean()
         return acc
 
