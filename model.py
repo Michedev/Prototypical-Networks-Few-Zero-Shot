@@ -84,7 +84,12 @@ class PrototypicalNetwork(pl.LightningModule):
                                         batch_supp.size(5))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, num_classes, -1)
-        c = embeddings_supp.mean(dim=1, keepdim=True).detach()
+        c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1])
+        for i_batch in range(batch_size):
+            for i_supp in range(self.supp_size):
+                for i_class in range(num_classes):
+                    c[i_batch, y_train[i_batch, i_supp, i_class]] += embeddings_supp[i_batch, i_supp, i_class]
+        c /= self.supp_size
         batch_query = batch_query.reshape(batch_query.size(0) *
                                           batch_query.size(1) *
                                           batch_query.size(2),
@@ -123,7 +128,8 @@ class PrototypicalNetwork(pl.LightningModule):
                 for i_class in range(num_classes):
                     for j_class in range(i_class, num_classes):
                         if i_class != j_class:
-                            neg_distance = -self.distance_f(query[i_batch, i_query, i_class, :], c[i_batch, 0, j_class, :]).sum()
+                            neg_distance = -self.distance_f(query[i_batch, i_query, i_class, :],
+                                                            c[i_batch, 0, j_class, :]).sum()
                             neg_distance = neg_distance.exp() / (num_classes * self.query_size) + 10e-4
                             sum_neg_distance += neg_distance
         loss += sum_neg_distance.log()
