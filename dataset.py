@@ -51,19 +51,17 @@ class MetaLearningDataset(torch.utils.data.Dataset):
         shuffle(self.class_pool)
 
     def fit_meta_task(self, X_train, X_test, classes):
-        image_names_batch = []
         rotations = {}
         y_train = torch.zeros([self.train_k, X_train.size(1)])
         y_test = torch.zeros([self.test_k, X_train.size(1)])
         for i_class, class_name in enumerate(classes):
             name_images = sample(class_name.files(), self.k)
-            image_names_batch += name_images
             y_train[:, i_class] += i_class
             y_test[:, i_class] += i_class
             rotation = 0 if not self.random_rotation else 90 * randint(0, 3)
             rotations[i_class] = rotation
             self.fit_images_(X_train, i_class, name_images[:self.train_k], rotation)
-            self.fit_images_(X_test, i_class, name_images[self.train_k], rotation)
+            self.fit_images_(X_test, i_class, name_images[self.train_k:], rotation)
         return X_train, X_test, y_train, y_test
 
     def fit_images_(self, X: torch.Tensor, i_class: int, name_images: List[str], rotation: int):
