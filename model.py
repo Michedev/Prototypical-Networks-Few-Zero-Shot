@@ -111,6 +111,7 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def calc_accuracy(self, c, query, y_test):
         pred_class = self.find_closest(c, query)
+        y_test = y_test.reshape(y_test.size(0), y_test.size(1) * y_test.size(2), y_test.size(3))
         return (pred_class == y_test).float().mean()
 
     def calc_loss(self, c: torch.Tensor, query: torch.Tensor):
