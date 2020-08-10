@@ -84,7 +84,7 @@ class PrototypicalNetwork(pl.LightningModule):
                                         batch_supp.size(5))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, num_classes, -1)
-        c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1])
+        c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1]).to(self.device)
         for i_batch in range(batch_size):
             for i_supp in range(self.supp_size):
                 for i_class in range(num_classes):
@@ -101,6 +101,7 @@ class PrototypicalNetwork(pl.LightningModule):
         return c, embeddings_query
 
     def find_closest(self, c, query):
+        c = c.unsqueeze(1)
         query_reshaped = query.reshape(query.size(0), query.size(1) * query.size(2), 1, query.size(3))
         return self.distance_f(query_reshaped, c).argmax(2)
 
@@ -129,7 +130,7 @@ class PrototypicalNetwork(pl.LightningModule):
                     for j_class in range(i_class, num_classes):
                         if i_class != j_class:
                             neg_distance = -self.distance_f(query[i_batch, i_query, i_class, :],
-                                                            c[i_batch, 0, j_class, :]).sum()
+                                                            c[i_batch, j_class, :]).sum()
                             neg_distance = neg_distance.exp() / (num_classes * self.query_size) + 10e-4
                             sum_neg_distance += neg_distance
         loss += sum_neg_distance.log()
