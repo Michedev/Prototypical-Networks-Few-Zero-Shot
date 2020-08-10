@@ -1,5 +1,7 @@
 import zipfile
 from multiprocessing import cpu_count
+from typing import List
+
 import numpy as np
 import torch
 from random import sample, randint, shuffle
@@ -16,14 +18,13 @@ from paths import OMNIGLOTFOLDER, MINIIMAGENETFOLDER
 
 class MetaLearningDataset(torch.utils.data.Dataset):
 
-    def __init__(self, class_pool, n, n_s, n_q, random_rotation, image_size, length=None):
+    def __init__(self, class_pool, n, train_k, test_k, random_rotation, image_size, length=None):
         self.class_pool = class_pool
         self.n = n
-        self.k = n_s + n_q
-        self.n_s = n_s
-        self.n_q = n_q
+        self.k = train_k + test_k
+        self.train_k = train_k
+        self.test_k = test_k
         self.t = n * self.k
-        self.ohe = torch.eye(n)
         self.image_size = list(image_size)
         self.random_rotation = random_rotation
         self.remaining_classes = []
@@ -41,28 +42,37 @@ class MetaLearningDataset(torch.utils.data.Dataset):
     def __getitem__(self, i):
         sampled_classes = sample(self.class_pool, self.n)
         n = len(sampled_classes)
-        X = torch.zeros([self.k, n] + self.image_size, dtype=torch.float32)
-        image_names_batch, rotations, X = self.fit_train_task(X, sampled_classes, self.n_s)
-        return X
+        X_train = torch.zeros([self.train_k, n] + self.image_size, dtype=torch.float)
+        X_test = torch.zeros([self.test_k, n] + self.image_size, dtype=torch.float)
+        return self.fit_meta_task(X_train, X_test, sampled_classes) #X_train, X_test, y_train, y_test
+
 
     def shuffle(self):
         shuffle(self.class_pool)
 
-    def fit_train_task(self, X, classes, n_s):
+    def fit_meta_task(self, X_train, X_test, classes):
         image_names_batch = []
         rotations = {}
+        y_train = torch.zeros([self.train_k, X_train.size(1)])
+        y_test = torch.zeros([self.test_k, X_train.size(1)])
         for i_class, class_name in enumerate(classes):
             name_images = sample(class_name.files(), self.k)
             image_names_batch += name_images
+            y_train[:, i_class] += i_class
+            y_test[:, i_class] += i_class
             rotation = 0 if not self.random_rotation else 90 * randint(0, 3)
             rotations[i_class] = rotation
-            for i_img, name_image in enumerate(name_images):
-                img = self.load_and_transform(name_image, rotation)
-                if X.shape[-1] == 1:
-                    img = img.unsqueeze(-1)
-                X[i_img, i_class, :, :, :] = img
-                del img
-        return image_names_batch, rotations, X
+            self.fit_images_(X_train, i_class, name_images[:self.train_k], rotation)
+            self.fit_images_(X_test, i_class, name_images[self.train_k], rotation)
+        return X_train, X_test, y_train, y_test
+
+    def fit_images_(self, X: torch.Tensor, i_class: int, name_images: List[str], rotation: int):
+        for i_img, name_image in enumerate(name_images):
+            img = self.load_and_transform(name_image, rotation)
+            if X.shape[-1] == 1:
+                img = img.unsqueeze(-1)
+            X[i_img, i_class, :, :, :] = img
+            del img
 
     def load_and_transform(self, name_image, rotation):
         img = Image.open(name_image).convert('RGB')
@@ -73,15 +83,15 @@ class MetaLearningDataset(torch.utils.data.Dataset):
 
 class OmniglotMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, n_s, n_q, length=None):
-        super(OmniglotMetaLearning, self).__init__(class_pool, n, n_s, n_q, random_rotation=True,
+    def __init__(self, class_pool, n, train_k, test_k, length=None):
+        super(OmniglotMetaLearning, self).__init__(class_pool, n, train_k, test_k, random_rotation=True,
                                                    image_size=[1, 28, 28], length=length)
 
 
 class MiniImageNetMetaLearning(MetaLearningDataset):
 
-    def __init__(self, class_pool, n, n_s, n_q, length=None):
-        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, n_s, n_q, False, image_size=[3, 84, 84],
+    def __init__(self, class_pool, n, train_k, test_k, length=None):
+        super(MiniImageNetMetaLearning, self).__init__(class_pool, n, train_k, test_k, False, image_size=[3, 84, 84],
                                                        length=length)
 
 
