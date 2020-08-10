@@ -1,14 +1,11 @@
 import zipfile
 from multiprocessing import cpu_count
-from typing import List
-import pytorch_lightning as pl
 import numpy as np
 import torch
 from random import sample, randint, shuffle
 
 from path import Path
 import wget
-from skimage import io, transform
 from torch.utils.data import DataLoader
 from torchvision.datasets.utils import download_file_from_google_drive
 from PIL import Image

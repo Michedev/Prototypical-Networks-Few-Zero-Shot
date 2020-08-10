@@ -1,11 +1,10 @@
+import fire
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
+
 from dataset import MiniImageNetDataLoader, pull_data_miniimagenet
 from model import PrototypicalNetwork
-from paths import ROOT, OMNIGLOTFOLDER, WEIGHTSFOLDER, EMBEDDING_PATH
-import pytorch_lightning as pl
-from pytorch_lightning import seed_everything
-from pytorch_lightning.callbacks import ModelCheckpoint, ProgressBar
-import fire
-import torch
+from paths import WEIGHTSFOLDER, EMBEDDING_PATH
 
 
 def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epochs: int = 1000, batch_size: int = 32,
