@@ -52,8 +52,8 @@ class MetaLearningDataset(torch.utils.data.Dataset):
 
     def fit_meta_task(self, X_train, X_test, classes):
         rotations = {}
-        y_train = torch.zeros([self.train_k, X_train.size(1)])
-        y_test = torch.zeros([self.test_k, X_train.size(1)])
+        y_train = torch.zeros([self.train_k, X_train.size(1)], dtype=torch.int64)
+        y_test = torch.zeros([self.test_k, X_train.size(1)], dtype=torch.int64)
         for i_class, class_name in enumerate(classes):
             name_images = sample(class_name.files(), self.k)
             y_train[:, i_class] += i_class
