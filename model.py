@@ -126,7 +126,8 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def calc_loss(self, c: torch.Tensor, query: torch.Tensor, y_test):
         distances = self.distances_centers(c, query)
-        distances = distances.softmax(dim=1)
+        distances = distances.reshape(distances.size(0) * distances.size(1), distances.size(2)).softmax(-1)
+        y_test = y_test.flatten()
         return self.loss_f(distances, y_test)
 
     def training_epoch_end(self, outputs):
