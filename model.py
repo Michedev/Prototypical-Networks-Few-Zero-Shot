@@ -35,31 +35,6 @@ def embedding_omniglot():
     )
 
 
-class ModelSaver:
-
-    def __init__(self, model, savepath: Path, mode='min'):
-        assert mode in ['min', 'max']
-        assert savepath.endswith('.pth')
-        self.model = model
-        self.mode = mode
-        self.best_value = -float('inf') if mode == 'max' else float('inf')
-        self.savepath = savepath
-        self.step = self.step_max if mode == 'max' else self.step_min
-
-    def step_max(self, curr_value):
-        if curr_value > self.best_value:
-            self.best_value = curr_value
-            torch.save(self.model.state_dict(), self.savepath)
-
-    def step_min(self, curr_value):
-        if curr_value < self.best_value:
-            self.best_value = curr_value
-            torch.save(self.model.state_dict(), self.savepath)
-
-    def step(self, curr_value):
-        raise NotImplementedError("Function initialized in the constructor")
-
-
 class PrototypicalNetwork(pl.LightningModule):
 
     def __init__(self, train_n: int, test_n: int, supp_size: int, query_size: int, lr=10e-3, distance_f='euclidean'):
@@ -170,5 +145,5 @@ class PrototypicalNetwork(pl.LightningModule):
 
     def configure_optimizers(self):
         opt = torch.optim.Adam(self.parameters(), lr=self.lr)
-        half_lr = torch.optim.lr_scheduler.StepLR(opt, 2000, 0.5)
+        half_lr = torch.optim.lr_scheduler.StepLR(opt, 20, 0.5)
         return [opt], [half_lr]
