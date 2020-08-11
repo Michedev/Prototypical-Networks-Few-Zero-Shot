@@ -75,7 +75,7 @@ class PrototypicalNetwork(Module):
                                           batch_query.size(5))
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, query_size, num_classes, -1)
-        return self.distances_centers(c, embeddings_query)
+        return self.distances_centers(c, embeddings_query).log_softmax(-1)
 
     def distances_centers(self, c, query):
         c = c.unsqueeze(1)
@@ -91,7 +91,7 @@ def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None
     lr_scheduler = torch.optim.lr_scheduler.StepLR(opt, 200, 0.5)
 
     def calc_loss(distances, y_test):
-        distances = distances.reshape(distances.size(0) * distances.size(1), distances.size(2)).softmax(-1)
+        distances = distances.reshape(distances.size(0) * distances.size(1), distances.size(2))
         y_test = y_test.flatten()
         return loss_f(distances, y_test)
 
