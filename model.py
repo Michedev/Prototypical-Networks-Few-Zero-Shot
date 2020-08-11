@@ -60,7 +60,7 @@ class PrototypicalNetwork(Module):
                                         batch_supp.size(3),  # w
                                         batch_supp.size(4))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
-        embeddings_supp = embeddings_supp.reshape(batch_size, supp_size, num_classes, -1)
+        embeddings_supp = embeddings_supp.reshape(batch_size, supp_size, -1)
         c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1]).to(batch_supp.device)
         for i_batch in range(batch_size):
             for i_supp in range(supp_size):
@@ -72,8 +72,8 @@ class PrototypicalNetwork(Module):
                                           batch_query.size(3),
                                           batch_query.size(4))
         embeddings_query = self.embedding_nn(batch_query)
-        embeddings_query = embeddings_query.reshape(batch_size, query_size, num_classes, -1)
-        return self.distances_centers(c, embeddings_query).log_softmax(dim=-1)
+        embeddings_query = embeddings_query.reshape(batch_size, query_size, -1)
+        return - self.distances_centers(c, embeddings_query).log_softmax(dim=-1)
 
     def distances_centers(self, c, query):
         c = c.unsqueeze(1)
