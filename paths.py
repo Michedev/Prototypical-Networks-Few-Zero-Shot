@@ -11,5 +11,3 @@ if not WEIGHTSFOLDER.exists():
 if not LOGFOLDER.exists():
     LOGFOLDER.mkdir()
 EMBEDDING_PATH = WEIGHTSFOLDER / 'embedding.pth'
-
-EMBEDDING_PATH_MINIIMAGENET = WEIGHTSFOLDER / 'embedding.pth'

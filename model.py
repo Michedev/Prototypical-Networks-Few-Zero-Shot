@@ -112,10 +112,8 @@ def train_model(model, lr, epochs, device, train_loader, val_loader=None):
 
     def test_step(batch):
         X_train, X_test, y_train, y_test = batch
-        X_train = X_train.to(device)
-        X_test = X_test.to(device)
-        y_train = y_train.to(device)
-        y_test = y_test.to(device)
+        X_train = X_train.to(device); X_test = X_test.to(device)
+        y_train = y_train.to(device); y_test = y_test.to(device)
         distances = model(X_train, y_train, X_test)
         loss = calc_loss(distances, y_test)
         acc = calc_accuracy(distances, y_test)
