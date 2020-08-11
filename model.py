@@ -134,22 +134,26 @@ def train_model(model, lr, epochs, device, train_loader, val_loader=None):
 
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_metrics(engine):
-        logger.add_scalar('loss/epoch_train', engine.state.metrics['train_loss'], engine.state.epoch)
-        logger.add_scalar('accuracy/epoch_train', engine.state.metrics['train_accuracy'], engine.state.epoch)
+        train_loss_ = engine.state.metrics['train_loss']
+        train_accuracy_ = engine.state.metrics['train_accuracy']
+        print("Epoch", engine.state.epoch)
+        print("Train loss", train_loss_, '-', 'Train Accuracy', train_accuracy_)
+        logger.add_scalar('loss/epoch_train', train_loss_, engine.state.epoch)
+        logger.add_scalar('accuracy/epoch_train', train_accuracy_, engine.state.epoch)
 
     if val_loader is not None:
-        setup_validation(trainer, model, val_loader)
+        setup_validation(trainer, model, val_loader, logger, test_step)
 
     trainer.run(train_loader, epochs)
 
 
-def setup_validation(trainer, model, val_loader):
+def setup_validation(trainer, model, val_loader, logger, step_f):
     @trainer.on(Events.EPOCH_COMPLETED)
     def validate_data(engine: Engine):
         model.eval()
         model.set_requires_grad_(False)
 
-        val = Engine(lambda e, b: test_step(b))
+        val = Engine(lambda e, b: step_f(b))
 
         @val.on(Events.EPOCH_STARTED)
         def init_state(engine: Engine):
@@ -166,6 +170,7 @@ def setup_validation(trainer, model, val_loader):
         def log_stats(engine):
             mean_loss = engine.state.sum_loss / engine.state.iteration
             mean_acc = engine.state.sum_acc / engine.state.iteration
+            print("Validation Loss", float(mean_loss), '-', 'Validation Accuracy', float(mean_acc))
             logger.add_scalar('loss/epoch_val', mean_loss, trainer.state.epoch)
             logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)
 

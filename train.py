@@ -1,11 +1,9 @@
 import fire
-import pytorch_lightning as pl
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint
 
 from dataset import MiniImageNetDataLoader, pull_data_miniimagenet
 from model import PrototypicalNetwork, train_model
-from paths import WEIGHTSFOLDER, EMBEDDING_PATH
+from paths import EMBEDDING_PATH
 
 
 def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epochs: int = 1000, batch_size: int = 32,
@@ -14,7 +12,6 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
     assert dataset in ['omniglot', 'miniimagenet']
     assert device == 'cpu' or 'cuda' in device
     print("Running in", device)
-    EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
     if dataset == 'omniglot':
         raise NotImplementedError("Omniglot not yet implemented")
     else:
