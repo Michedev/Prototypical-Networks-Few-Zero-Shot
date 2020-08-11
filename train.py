@@ -15,14 +15,13 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
     if dataset == 'omniglot':
         raise NotImplementedError("Omniglot not yet implemented")
     else:
-        pull_data_miniimagenet(force_download)
         datamodule = MiniImageNetDataLoader(batch_size, train_n, val_n, test_n, n_s, n_q, trainsize, valsize, testsize, device)
     model = PrototypicalNetwork().to(device)
     if EMBEDDING_PATH.exists():
         print('Loading', EMBEDDING_PATH)
         model.load_state_dict(torch.load(EMBEDDING_PATH, device))
 
-    train_model(model, lr, epochs, device, datamodule.train_dataloader(), datamodule.val_dataloader())
+    train_model(model, lr, epochs, device, datamodule.train_dataloader(), datamodule.val_dataloader(), trainsize, valsize)
 
 
 if __name__ == '__main__':

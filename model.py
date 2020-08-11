@@ -51,39 +51,37 @@ class PrototypicalNetwork(Module):
             self.distance_f = lambda x, y: (x - y).norm(2, dim=-1)
 
     def forward(self, batch_supp, y_train, batch_query):
-        batch_size, supp_size, num_classes = batch_supp.shape[:3]
+        batch_size, supp_size = batch_supp.shape[:2]
         query_size = batch_query.size(1)
+        num_classes = y_train.max() + 1
         batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
-                                        batch_supp.size(1) *  # n_s
-                                        batch_supp.size(2),  # n
-                                        batch_supp.size(3),  # channel
-                                        batch_supp.size(4),  # w
-                                        batch_supp.size(5))  # h
+                                        batch_supp.size(1),  # n_s
+                                        batch_supp.size(2),  # channel
+                                        batch_supp.size(3),  # w
+                                        batch_supp.size(4))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, supp_size, num_classes, -1)
         c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1]).to(batch_supp.device)
         for i_batch in range(batch_size):
             for i_supp in range(supp_size):
-                for i_class in range(num_classes):
-                    c[i_batch, y_train[i_batch, i_supp, i_class]] += embeddings_supp[i_batch, i_supp, i_class]
+                    c[i_batch, y_train[i_batch, i_supp]] += embeddings_supp[i_batch, i_supp]
         c /= supp_size
         batch_query = batch_query.reshape(batch_query.size(0) *
-                                          batch_query.size(1) *
+                                          batch_query.size(1),
                                           batch_query.size(2),
                                           batch_query.size(3),
-                                          batch_query.size(4),
-                                          batch_query.size(5))
+                                          batch_query.size(4))
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, query_size, num_classes, -1)
-        return self.distances_centers(c, embeddings_query).log_softmax(-1)
+        return self.distances_centers(c, embeddings_query).log_softmax(dim=-1)
 
     def distances_centers(self, c, query):
         c = c.unsqueeze(1)
-        query_reshaped = query.reshape(query.size(0), query.size(1) * query.size(2), 1, query.size(3))
-        return self.distance_f(query_reshaped, c)
+        query = query.unsqueeze(2)
+        return self.distance_f(query, c)
 
 
-def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None):
+def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None, train_len=None, val_len=None):
     loss_f = torch.nn.CrossEntropyLoss()
     logger = SummaryWriter(LOGFOLDER / 'log_' + datetime.now().isoformat(sep='-'))
 
@@ -111,7 +109,8 @@ def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None
         return loss, acc
 
     def test_step(batch):
-        X_train, X_test, y_train, y_test = batch
+        X_train, y_train = batch["train"]
+        X_test, y_test = batch["test"]
         X_train = X_train.to(device); X_test = X_test.to(device)
         y_train = y_train.to(device); y_test = y_test.to(device)
         distances = model(X_train, y_train, X_test)
@@ -140,12 +139,12 @@ def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None
         logger.add_scalar('accuracy/epoch_train', train_accuracy_, engine.state.epoch)
 
     if val_loader is not None:
-        setup_validation(trainer, model, val_loader, logger, test_step)
+        setup_validation(trainer, model, val_loader, logger, test_step, val_len)
 
-    trainer.run(train_loader, epochs)
+    trainer.run(train_loader, epochs, train_len)
 
 
-def setup_validation(trainer, model: Module, val_loader, logger, step_f):
+def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len):
     @trainer.on(Events.EPOCH_COMPLETED)
     def validate_data(engine: Engine):
         model.eval()
@@ -172,6 +171,6 @@ def setup_validation(trainer, model: Module, val_loader, logger, step_f):
             logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)
 
         with torch.no_grad():
-            val.run(val_loader, 1)
+            val.run(val_loader, 1, val_len)
 
         model.train()
