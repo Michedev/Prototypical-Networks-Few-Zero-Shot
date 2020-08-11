@@ -83,7 +83,7 @@ class PrototypicalNetwork(Module):
         return self.distance_f(query_reshaped, c)
 
 
-def train_model(model, lr, epochs, device, train_loader, val_loader=None):
+def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None):
     loss_f = torch.nn.CrossEntropyLoss()
     logger = SummaryWriter(LOGFOLDER / 'log_' + datetime.now().isoformat(sep='-'))
 
@@ -145,11 +145,10 @@ def train_model(model, lr, epochs, device, train_loader, val_loader=None):
     trainer.run(train_loader, epochs)
 
 
-def setup_validation(trainer, model, val_loader, logger, step_f):
+def setup_validation(trainer, model: Module, val_loader, logger, step_f):
     @trainer.on(Events.EPOCH_COMPLETED)
     def validate_data(engine: Engine):
         model.eval()
-        model.set_requires_grad_(False)
 
         val = Engine(lambda e, b: step_f(b))
 
@@ -172,7 +171,7 @@ def setup_validation(trainer, model, val_loader, logger, step_f):
             logger.add_scalar('loss/epoch_val', mean_loss, trainer.state.epoch)
             logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)
 
-        val.run(val_loader, 1)
+        with torch.no_grad():
+            val.run(val_loader, 1)
 
         model.train()
-        model.set_requires_grad_(True)
