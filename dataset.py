@@ -167,7 +167,7 @@ def test_classes_miniimagenet():
 class MiniImageNetDataLoader:
 
     def __init__(self, batch_size: int, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int,
-                 train_len: int, val_len: int, test_len: int, cpus: int = None):
+                 train_len: int, val_len: int, test_len: int, device: str, cpus: int = None):
         self.train_len = train_len
         self.val_len = val_len
         self.test_len = test_len
@@ -177,6 +177,7 @@ class MiniImageNetDataLoader:
         self.val_n = val_n
         self.test_n = test_n
         self.batch_size = batch_size
+        self.pin = 'cuda' in device
         if cpus is None:
             self.cpus = cpu_count()
         else:
@@ -192,10 +193,10 @@ class MiniImageNetDataLoader:
                                                   self.n_s, self.n_q, self.test_len)
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.train_data, batch_size=self.batch_size, shuffle=True, num_workers=self.cpus)
+        return DataLoader(self.train_data, batch_size=self.batch_size, shuffle=True, num_workers=self.cpus, pin_memory=self.pin)
 
     def val_dataloader(self):
-        return DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=self.cpus)
+        return DataLoader(self.val_data, batch_size=self.batch_size, shuffle=False, num_workers=self.cpus, pin_memory=self.pin)
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self.test_data, batch_size=self.batch_size, shuffle=False, num_workers=self.cpus)
+        return DataLoader(self.test_data, batch_size=self.batch_size, shuffle=False, num_workers=self.cpus, pin_memory=self.pin)
