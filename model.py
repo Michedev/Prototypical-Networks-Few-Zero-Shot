@@ -7,7 +7,7 @@ from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Events, Engine
 from ignite.metrics import RunningAverage
 from path import Path
-from torch.nn import Conv2d, ReLU, Sequential, MaxPool2d, Flatten, GroupNorm, Module
+from torch.nn import Conv2d, ReLU, Sequential, MaxPool2d, Flatten, GroupNorm, Module, BatchNorm2d
 from torch.utils.tensorboard import SummaryWriter
 import ignite
 from paths import EMBEDDING_PATH, LOGFOLDER
@@ -16,7 +16,7 @@ from paths import EMBEDDING_PATH, LOGFOLDER
 def EmbeddingBlock(input_channels):
     return Sequential(
         Conv2d(input_channels, 64, kernel_size=3, padding=1),
-        GroupNorm(4, 64),
+        BatchNorm2d(64),
         ReLU(),
         MaxPool2d(2, ceil_mode=False)
     )
