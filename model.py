@@ -61,7 +61,7 @@ class PrototypicalNetwork(Module):
                                         batch_supp.size(5))  # h
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, supp_size, num_classes, -1)
-        c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1]).to(self.device)
+        c = torch.zeros(batch_size, num_classes, embeddings_supp.shape[-1]).to(batch_supp.device)
         for i_batch in range(batch_size):
             for i_supp in range(supp_size):
                 for i_class in range(num_classes):
@@ -96,6 +96,7 @@ def train_model(model, lr, epochs, device, train_loader, val_loader=None):
         return loss_f(distances, y_test)
 
     def calc_accuracy(distances, y_test):
+        distances = distances.reshape(distances.size(0) * distances.size(1), distances.size(2)).argmax(-1)
         y_test = y_test.flatten(1)
         return (distances == y_test).float().mean()
 

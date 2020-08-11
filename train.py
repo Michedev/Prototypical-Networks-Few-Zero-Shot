@@ -13,21 +13,13 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
          force_download=False, early_stop=False, device='cpu'):
     assert dataset in ['omniglot', 'miniimagenet']
     assert device == 'cpu' or 'cuda' in device
+    print("Running in", device)
     EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
     if dataset == 'omniglot':
         raise NotImplementedError("Omniglot not yet implemented")
     else:
         pull_data_miniimagenet(force_download)
         datamodule = MiniImageNetDataLoader(batch_size, train_n, val_n, test_n, n_s, n_q, trainsize, valsize, testsize, device)
-    checkpoint = ModelCheckpoint(
-        WEIGHTSFOLDER / 'best_model', verbose=True,
-        mode='min', prefix=''
-    )
-    if early_stop:
-        early_stop = pl.callbacks.EarlyStopping()
-    trainer = pl.Trainer(checkpoint_callback=checkpoint, max_epochs=epochs,
-                         early_stop_callback=early_stop, gpus=gpu,
-                         auto_select_gpus=True)
     model = PrototypicalNetwork().to(device)
     if EMBEDDING_PATH.exists():
         print('Loading', EMBEDDING_PATH)
