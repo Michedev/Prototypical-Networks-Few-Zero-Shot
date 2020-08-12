@@ -1,7 +1,7 @@
 import fire
 import torch
 
-from dataset import MiniImageNetDataLoader, pull_data_miniimagenet
+from dataset import MiniImageNetDataLoader
 from model import PrototypicalNetwork
 from trainer import Trainer
 from paths import EMBEDDING_PATH
