@@ -2,6 +2,7 @@ clean-logs:
 	rm -r logs/
 clean-models:
 	rm -r model_weights
+clean-all: clean-logs clean-models
 
 train-miniimagenet:
 	python3 train.py --dataset='miniimagenet' --train-n=30 --val-n=5 --test-n=5 --n-s=1 --n-q=15 --trainsize=1_000 --valsize=64 --testsize=64 --device='cuda:1' --batch-size=1
