@@ -2,7 +2,8 @@ import fire
 import torch
 
 from dataset import MiniImageNetDataLoader, pull_data_miniimagenet
-from model import PrototypicalNetwork, train_model
+from model import PrototypicalNetwork
+from trainer import Trainer
 from paths import EMBEDDING_PATH
 
 
@@ -20,8 +21,9 @@ def main(dataset, train_n: int, val_n: int, test_n: int, n_s: int, n_q: int, epo
     if EMBEDDING_PATH.exists():
         print('Loading', EMBEDDING_PATH)
         model.load_state_dict(torch.load(EMBEDDING_PATH, device))
+    trainer = Trainer(model, lr, epochs, device)
 
-    train_model(model, lr, epochs, device, datamodule.train_dataloader(), datamodule.val_dataloader(), trainsize, valsize)
+    trainer.train(datamodule.train_dataloader(), datamodule.val_dataloader(), trainsize, valsize)
 
 
 if __name__ == '__main__':

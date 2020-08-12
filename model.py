@@ -1,16 +1,5 @@
-from datetime import datetime
-from operator import itemgetter
-
-import pytorch_lightning as pl
 import torch
-from ignite.contrib.handlers import ProgressBar
-from ignite.engine import Events, Engine
-from ignite.metrics import RunningAverage
-from path import Path
-from torch.nn import Conv2d, ReLU, Sequential, MaxPool2d, Flatten, GroupNorm, Module, BatchNorm2d
-from torch.utils.tensorboard import SummaryWriter
-import ignite
-from paths import EMBEDDING_PATH, LOGFOLDER
+from torch.nn import Conv2d, ReLU, Sequential, MaxPool2d, Flatten, Module, BatchNorm2d
 
 
 def EmbeddingBlock(input_channels):
@@ -73,7 +62,7 @@ class PrototypicalNetwork(Module):
                                           batch_query.size(4))
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, query_size, num_classes, -1)
-        return self.distances_centers(c, embeddings_query).log_softmax(dim=-1)
+        return - self.distances_centers(c, embeddings_query).log_softmax(dim=-1)
 
     def distances_centers(self, c, query):
         c = c.unsqueeze(1)
@@ -81,96 +70,3 @@ class PrototypicalNetwork(Module):
         return self.distance_f(query, c)
 
 
-def train_model(model: Module, lr, epochs, device, train_loader, val_loader=None, train_len=None, val_len=None):
-    loss_f = torch.nn.CrossEntropyLoss()
-    logger = SummaryWriter(LOGFOLDER / 'log_' + datetime.now().isoformat(sep='-'))
-
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(opt, 200, 0.5)
-
-    def calc_loss(distances, y_test):
-        distances = distances.reshape(distances.size(0) * distances.size(1), distances.size(2))
-        y_test = y_test.flatten()
-        return loss_f(distances, y_test)
-
-    def calc_accuracy(distances, y_test):
-        distances = distances.reshape(distances.size(0) * distances.size(1), distances.size(2)).argmax(-1)
-        y_test = y_test.flatten(1)
-        return (distances == y_test).float().mean()
-
-    def train_step(engine, batch):
-        loss, acc = test_step(batch)
-        loss.backward()
-        opt.step()
-        opt.zero_grad()
-        lr_scheduler.step()
-        logger.add_scalar('loss/train_batch', loss, engine.state.iteration)
-        logger.add_scalar('accuracy/train_batch', acc, engine.state.iteration)
-        return loss, acc
-
-    def test_step(batch):
-        X_train, y_train = batch["train"]
-        X_test, y_test = batch["test"]
-        X_train = X_train.to(device); X_test = X_test.to(device)
-        y_train = y_train.to(device); y_test = y_test.to(device)
-        distances = model(X_train, y_train, X_test)
-        loss = calc_loss(distances, y_test)
-        acc = calc_accuracy(distances, y_test)
-        return loss, acc
-
-    trainer = Engine(train_step)
-
-    RunningAverage(output_transform=itemgetter(0)).attach(trainer, 'train_loss')
-    RunningAverage(output_transform=itemgetter(1)).attach(trainer, 'train_accuracy')
-
-    ProgressBar().attach(trainer, ['train_loss', 'train_accuracy'])
-
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def save_model(engine):
-        torch.save(model.state_dict(), EMBEDDING_PATH)
-
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def log_metrics(engine):
-        train_loss_ = engine.state.metrics['train_loss']
-        train_accuracy_ = engine.state.metrics['train_accuracy']
-        print("Epoch", engine.state.epoch)
-        print("Train loss", train_loss_, '-', 'Train Accuracy', train_accuracy_)
-        logger.add_scalar('loss/epoch_train', train_loss_, engine.state.epoch)
-        logger.add_scalar('accuracy/epoch_train', train_accuracy_, engine.state.epoch)
-
-    if val_loader is not None:
-        setup_validation(trainer, model, val_loader, logger, test_step, val_len)
-
-    trainer.run(train_loader, epochs, train_len)
-
-
-def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len):
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def validate_data(engine: Engine):
-        model.eval()
-
-        val = Engine(lambda e, b: step_f(b))
-
-        @val.on(Events.EPOCH_STARTED)
-        def init_state(engine: Engine):
-            engine.state.sum_loss = 0.0
-            engine.state.sum_acc = 0.0
-
-        @val.on(Events.ITERATION_COMPLETED)
-        def sum_stats(engine):
-            batch_loss, batch_acc = engine.state.output
-            engine.state.sum_loss += batch_loss
-            engine.state.sum_acc += batch_acc
-
-        @val.on(Events.EPOCH_COMPLETED)
-        def log_stats(engine):
-            mean_loss = engine.state.sum_loss / engine.state.iteration
-            mean_acc = engine.state.sum_acc / engine.state.iteration
-            print("Validation Loss", float(mean_loss), '-', 'Validation Accuracy', float(mean_acc))
-            logger.add_scalar('loss/epoch_val', mean_loss, trainer.state.epoch)
-            logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)
-
-        with torch.no_grad():
-            val.run(val_loader, 1, val_len)
-
-        model.train()
