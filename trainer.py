@@ -66,7 +66,7 @@ def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len
     def validate_data(engine: Engine):
         model.eval()
 
-        val = Engine(lambda e, b: step_f(b))
+        val = Engine(step_f)
 
         @val.on(Events.EPOCH_STARTED)
         def init_state(engine: Engine):
