@@ -22,7 +22,7 @@ class Trainer(Tester):
         self.logger = SummaryWriter(LOGFOLDER / 'log_' + datetime.now().isoformat(sep='-'))
 
         self.opt = torch.optim.Adam(model.parameters(), lr=lr)
-        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.opt, 200, 0.5)
+        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.opt, 3000, 0.5)
 
     def train_step(self, engine, batch):
         loss, acc = self.test_step(engine, batch)
