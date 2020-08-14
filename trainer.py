@@ -8,8 +8,33 @@ from ignite.metrics import RunningAverage
 from torch.nn import Module
 from torch.utils.tensorboard import SummaryWriter
 
-from paths import LOGFOLDER, EMBEDDING_PATH
+from paths import LOGFOLDER, EMBEDDING_PATH, WEIGHTSFOLDER
 from tester import Tester
+
+
+class ModelSaver:
+
+    def __init__(self, model, save_path, mode='min', delta=0.0):
+        assert mode in ['min', 'max']
+        self.model = model
+        self.save_path = save_path
+        self.mode = mode
+        self.delta = delta
+        self.best_value = float('inf') if mode == 'min' else - float('inf')
+        self.step = self.max_step if mode == 'max' else self.min_step
+
+    def step(self, value):
+        raise NotImplementedError()
+
+    def max_step(self, value):
+        if (value - self.best_value) >= self.delta:
+            self.best_value = value
+            torch.save(self.model.state_dict(), self.save_path)
+
+    def min_step(self, value):
+        if (self.best_value - value) >= self.delta:
+            self.best_value = value
+            torch.save(self.model.state_dict(), self.save_path)
 
 
 class Trainer(Tester):
@@ -23,6 +48,7 @@ class Trainer(Tester):
 
         self.opt = torch.optim.Adam(model.parameters(), lr=lr)
         self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.opt, 3000, 0.5)
+        self.best_val_loss_saver = ModelSaver(model, WEIGHTSFOLDER / 'best_embedding_nn.pth')
 
     def train_step(self, engine, batch):
         loss, acc = self.test_step(engine, batch)
@@ -56,12 +82,12 @@ class Trainer(Tester):
             self.logger.add_scalar('accuracy/epoch_train', train_accuracy_, engine.state.epoch)
 
         if val_loader is not None:
-            setup_validation(trainer, self.model, val_loader, self.logger, self.test_step, val_len)
+            setup_validation(trainer, self.model, val_loader, self.logger, self.test_step, val_len, self.best_val_loss_saver)
 
         trainer.run(train_loader, self.epochs, train_len)
 
 
-def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len):
+def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len, saver):
     @trainer.on(Events.EPOCH_COMPLETED)
     def validate_data(engine: Engine):
         model.eval()
@@ -83,6 +109,7 @@ def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len
         def log_stats(engine):
             mean_loss = engine.state.sum_loss / engine.state.iteration
             mean_acc = engine.state.sum_acc / engine.state.iteration
+            saver.step(mean_loss)
             print("Validation Loss", float(mean_loss), '-', 'Validation Accuracy', float(mean_acc))
             logger.add_scalar('loss/epoch_val', mean_loss, trainer.state.epoch)
             logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)
