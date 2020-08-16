@@ -1,5 +1,7 @@
-pytorch_lightning==0.8.5
-torch==1.5.1
 fire==0.3.1
+torch==1.5.1
+torchmeta==1.4.6
+pytorch_ignite==0.4.1
 torchvision==0.6.1
+ignite==1.1.0
 path.py==12.5.0
