@@ -8,7 +8,7 @@ from ignite.metrics import RunningAverage
 from torch.nn import Module
 from torch.utils.tensorboard import SummaryWriter
 
-from paths import LOGFOLDER, EMBEDDING_PATH, WEIGHTSFOLDER
+from paths import LOGFOLDER, EMBEDDING_PATH, BEST_EMBEDDING_PATH
 from tester import Tester
 
 
@@ -48,7 +48,7 @@ class Trainer(Tester):
 
         self.opt = torch.optim.Adam(model.parameters(), lr=lr)
         self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.opt, 3000, 0.5)
-        self.best_val_loss_saver = ModelSaver(model, WEIGHTSFOLDER / 'best_embedding_nn.pth')
+        self.best_val_loss_saver = ModelSaver(model, BEST_EMBEDDING_PATH)
 
     def train_step(self, engine, batch):
         loss, acc = self.test_step(engine, batch)
@@ -87,7 +87,7 @@ class Trainer(Tester):
         trainer.run(train_loader, self.epochs, train_len)
 
 
-def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len, saver):
+def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len, saver=None):
     @trainer.on(Events.EPOCH_COMPLETED)
     def validate_data(engine: Engine):
         model.eval()
@@ -109,7 +109,8 @@ def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len
         def log_stats(engine):
             mean_loss = engine.state.sum_loss / engine.state.iteration
             mean_acc = engine.state.sum_acc / engine.state.iteration
-            saver.step(mean_loss)
+            if saver is not None:
+                saver.step(mean_loss)
             print("Validation Loss", float(mean_loss), '-', 'Validation Accuracy', float(mean_acc))
             logger.add_scalar('loss/epoch_val', mean_loss, trainer.state.epoch)
             logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)

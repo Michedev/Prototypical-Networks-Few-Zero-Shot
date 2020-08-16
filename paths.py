@@ -11,3 +11,4 @@ if not WEIGHTSFOLDER.exists():
 if not LOGFOLDER.exists():
     LOGFOLDER.mkdir()
 EMBEDDING_PATH = WEIGHTSFOLDER / 'embedding.pth'
+BEST_EMBEDDING_PATH = WEIGHTSFOLDER / 'best_embedding.pth'
