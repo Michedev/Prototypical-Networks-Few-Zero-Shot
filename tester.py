@@ -1,9 +1,9 @@
 from operator import itemgetter
+import torch
 
 from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events
 from ignite.metrics import RunningAverage
-
 
 class Tester:
 
@@ -37,20 +37,24 @@ class Tester:
 
         @tester.on(Events.EPOCH_STARTED)
         def init_vars(engine):
-            engine.state.sum_loss = 0.0
-            engine.state.sum_acc = 0.0
+            engine.state.losses = []
+            engine.state.accs = []
 
         @tester.on(Events.ITERATION_COMPLETED)
         def accumulate(engine):
             loss, acc = engine.state.output
-            engine.state.sum_loss += loss
-            engine.state.sum_acc += acc
+            engine.state.losses += [loss]
+            engine.state.accs += [acc]
 
         @tester.on(Events.EPOCH_COMPLETED)
         def view_output(engine: Engine):
-            mean_loss = engine.state.sum_loss / engine.state.iteration
-            mean_acc = engine.state.sum_acc / engine.state.iteration
-            print('Test loss', mean_loss, '-', 'Test accuracy', mean_acc)
+            engine.state.losses = torch.FloatTensor(engine.state.losses)
+            engine.state.accs = torch.FloatTensor(engine.state.accs)
+            mean_loss = engine.state.losses.mean().item()
+            std_loss = engine.state.losses.std().item()
+            mean_acc = engine.state.accs.mean().item()
+            std_acc = engine.state.accs.std().item()
+            print('Test loss', mean_loss, '+-', std_loss, ' - ', 'Test accuracy', mean_acc, '+-', std_acc)
 
         RunningAverage(output_transform=itemgetter(0)).attach(tester, 'test_loss')
         RunningAverage(output_transform=itemgetter(1)).attach(tester, 'test_accuracy')

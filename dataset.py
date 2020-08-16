@@ -16,7 +16,7 @@ def miniimagenet_transforms():
 
 def get_meta_miniimagenet(n: int, supp_size: int, query_size: int, split: str):
     assert split in ['train', 'val', 'test']
-    return miniimagenet(DATAFOLDER, supp_size, n, test_shots=query_size, meta_split=split)
+    return miniimagenet(DATAFOLDER, supp_size, n, test_shots=query_size, meta_split=split, download=True)
 
 
 def get_train_miniimagenet(n: int, supp_size: int, query_size: int):
