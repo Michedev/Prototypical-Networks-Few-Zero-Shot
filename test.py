@@ -1,6 +1,5 @@
 import torch
 
-from dataset import MiniImageNetDataLoader
 from model import PrototypicalNetwork
 from paths import EMBEDDING_PATH, BEST_EMBEDDING_PATH
 from tester import Tester
