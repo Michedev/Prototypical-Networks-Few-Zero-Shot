@@ -1,108 +1,46 @@
-from torch.nn import Conv2d, BatchNorm2d, ReLU, Sequential, MaxPool2d, Flatten
-import pytorch_lightning as pl
 import torch
-from torch.utils.data import DataLoader
-from path import Path
-from dataset import MiniImageNetMetaLearning, train_classes_miniimagenet, \
-    val_classes_miniimagenet, test_classes_miniimagenet
-from multiprocessing import cpu_count
+from torch import nn
+
 from paths import EMBEDDING_PATH
 
 
 def EmbeddingBlock(input_channels):
-    return Sequential(
-        Conv2d(input_channels, 64, kernel_size=3, padding=1),
-        BatchNorm2d(64),
-        ReLU(),
-        MaxPool2d(2, ceil_mode=True)
+    return nn.Sequential(
+        nn.Conv2d(input_channels, 64, kernel_size=3, padding=1),
+        nn.BatchNorm2d(64),
+        nn.ReLU(),
+        nn.MaxPool2d(2, ceil_mode=True)
     )
 
 
-def embedding_miniimagenet():
-    return Sequential(
+def embedding_module():
+    return nn.Sequential(
         EmbeddingBlock(3),
         EmbeddingBlock(64),
         EmbeddingBlock(64),
         EmbeddingBlock(64),
-        Flatten(start_dim=1)
+        nn.Flatten(start_dim=1)
     )
 
 
-def embedding_omniglot():
-    return Sequential(
-        EmbeddingBlock(3),
-        EmbeddingBlock(64),
-        EmbeddingBlock(64),
-        EmbeddingBlock(64),
-        Flatten(start_dim=1)
-    )
+class PrototypicalNetwork(nn.Module):
 
-
-class ModelSaver:
-
-    def __init__(self, model, savepath: Path, mode='min'):
-        assert mode in ['min', 'max']
-        assert savepath.endswith('.pth')
-        self.model = model
-        self.mode = mode
-        self.best_value = -float('inf') if mode == 'max' else float('inf')
-        self.savepath = savepath
-        self.step = self.step_max if mode == 'max' else self.step_min
-
-    def step_max(self, curr_value):
-        if curr_value > self.best_value:
-            self.best_value = curr_value
-            torch.save(self.model.state_dict(), self.savepath)
-
-    def step_min(self, curr_value):
-        if curr_value < self.best_value:
-            self.best_value = curr_value
-            torch.save(self.model.state_dict(), self.savepath)
-
-    def step(self, curr_value):
-        raise NotImplementedError("Function initialized in the constructor")
-
-
-class PrototypicalNetwork(pl.LightningModule):
-
-    def __init__(self, dataset: str, train_n: int, test_n: int, supp_size: int, query_size: int, lr=10e-3):
+    def __init__(self):
         super().__init__()
-        self.lr = lr
-        assert dataset in ['miniimagenet', 'omniglot']
-        if dataset == 'omniglot':
-            self.embedding_nn = embedding_omniglot()
-        else:
-            self.embedding_nn = embedding_miniimagenet()
-        self.train_n = train_n
-        self.test_n = test_n
-        self.supp_size = supp_size
-        self.query_size = query_size
-        self.loss_f = torch.nn.MSELoss(reduction='none')
-        self.dataset = dataset
-        EMBEDDING_PATH.replace('embedding', 'embedding_' + dataset)
+        self.embedding_nn = embedding_module()
 
     def forward(self, X):
         batch_size = X.size(0)
         batch_supp = X[:, :self.supp_size]
         batch_query = X[:, self.supp_size:]
-        batch_supp = batch_supp.reshape(batch_supp.size(0) *  # bs
-                                        batch_supp.size(1) *  # n_s
-                                        batch_supp.size(2),  # n
-                                        batch_supp.size(3),  # channel
-                                        batch_supp.size(4),  # w
-                                        batch_supp.size(5))  # h
+        batch_supp = batch_supp.flatten(0, 1)
         embeddings_supp = self.embedding_nn(batch_supp)
         embeddings_supp = embeddings_supp.reshape(batch_size, self.supp_size, self.train_n, -1)
-        c = embeddings_supp.mean(dim=1).detach()
-        batch_query = batch_query.reshape(batch_query.size(0) *
-                                          batch_query.size(1) *
-                                          batch_query.size(2),
-                                          batch_query.size(3),
-                                          batch_query.size(4),
-                                          batch_query.size(5))
+        centroids = embeddings_supp.mean(dim=1).detach()
+        batch_query = batch_query.flatten(0, 1)
         embeddings_query = self.embedding_nn(batch_query)
         embeddings_query = embeddings_query.reshape(batch_size, self.query_size, self.train_n, -1)
-        return c, embeddings_query
+        return centroids, embeddings_query
 
     def training_step(self, batch, batch_bn):
         X, y = batch
