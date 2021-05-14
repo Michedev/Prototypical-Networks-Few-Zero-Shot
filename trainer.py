@@ -1,119 +1,139 @@
-from datetime import datetime
-from operator import itemgetter
+from dataclasses import dataclass
+from typing import Optional, Union
 
 import torch
 from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events
-from ignite.metrics import RunningAverage
-from torch.nn import Module
-from torch.utils.tensorboard import SummaryWriter
-from tester import Tester
+from ignite.handlers import ModelCheckpoint
+from ignite.metrics import RunningAverage, Average, Accuracy
+from path import Path
+from torch.utils.data import DataLoader
+
+import logger
 
 
-class ModelSaver:
+@dataclass
+class Trainer:
+    model: torch.nn.Module
+    train_dloader: DataLoader
+    val_dloader: DataLoader
+    distance_fun: torch.nn.Module
+    run_path: Path
+    train_epochs: int
 
-    def __init__(self, model, save_path, mode='min', delta=0.0):
-        assert mode in ['min', 'max']
-        self.model = model
-        self.save_path = save_path
-        self.mode = mode
-        self.delta = delta
-        self.best_value = float('inf') if mode == 'min' else - float('inf')
-        self.step = self.max_step if mode == 'max' else self.min_step
+    opt: Optional[torch.optim.optimizer.Optimizer]
+    device: str
+    val_steps: Optional[int] = None
 
-    def step(self, value):
-        raise NotImplementedError()
+    def __post_init__(self):
+        self.model.to(self.device)
+        self.lr_decay = torch.optim.lr_scheduler.StepLR(self.opt, 3_000, 0.5)
 
-    def max_step(self, value):
-        if (value - self.best_value) >= self.delta:
-            self.best_value = value
-            torch.save(self.model.state_dict(), self.save_path)
-
-    def min_step(self, value):
-        if (self.best_value - value) >= self.delta:
-            self.best_value = value
-            torch.save(self.model.state_dict(), self.save_path)
-
-
-class Trainer(Tester):
-
-    def __init__(self, model: Module, lr, epochs, device):
-        loss_f = torch.nn.CrossEntropyLoss()
-        super().__init__(model, loss_f, device)
-        self.epochs = epochs
-        self.lr = lr
-        self.logger = SummaryWriter(LOGFOLDER / 'log_' + datetime.now().isoformat(sep='-'))
-
-        self.opt = torch.optim.Adam(model.parameters(), lr=lr)
-        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(self.opt, 3000, 0.5)
-        self.best_val_loss_saver = ModelSaver(model, BEST_EMBEDDING_PATH)
-
-    def train_step(self, engine, batch):
-        loss, acc = self.test_step(engine, batch)
-        loss.backward()
-        self.opt.step()
+    def train_step(self, batch):
         self.opt.zero_grad()
-        self.lr_scheduler.step()
-        self.logger.add_scalar('loss/train_batch', loss, engine.state.iteration)
-        self.logger.add_scalar('accuracy/train_batch', acc, engine.state.iteration)
-        return loss, acc
+        pred_output = self.pred_calc_loss(batch)
+        pred_output['loss'].backward()
+        self.opt.step()
+        return pred_output
 
-    def train(self, train_loader, val_loader=None, train_len=None, val_len=None):
-        trainer = Engine(self.train_step)
+    def pred_calc_loss(self, batch):
+        """
+        Predict then calculate loss
+        :param batch:
+        :type batch:
+        :return:
+        :rtype:
+        """
+        for k in batch:
+            batch[k].to(self.device)
+        X_supp, y_supp = batch['train']
+        X_query, y_query = batch['test']
+        pred_output = self.model(X_supp, y_supp, X_query)
+        loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
+        pred_output['loss'] = loss
+        pred_output['batch'] = batch
+        return pred_output
 
-        RunningAverage(output_transform=itemgetter(0)).attach(trainer, 'train_loss')
-        RunningAverage(output_transform=itemgetter(1)).attach(trainer, 'train_accuracy')
+    def calc_loss(self, centroids, embeddings_query, y_query):
+        """
+        Calculate loss as specified in "Prototypical Networks for Few-shot Learning" page 3 algorithm 1
+        using tensor broadcast operations.
+        :param centroids: Centroids calculated from support set. Shape: [batch_size, num_classes, num_embedding_features]
+        :param embeddings_query: Embeddings from images of query set. Shape: [batch_size, query_size * num_classes, num_embedding_features]
+        :param y_query: Labels of query samples. Shape: [batch_size, query_size * num_classes]
+        :return: the loss scalar value
+        """
+        centroids = centroids.unsqueeze(1)
+        embeddings_query = embeddings_query.unsqueeze(2)
+        loss_matrix = self.distance_fun(centroids, embeddings_query).sum(
+            dim=-1)  # [batch_size, query_size * num_classes, num_classes]
+        num_classes = centroids.shape[1]
+        is_different_class = torch.arange(num_classes).view(1, 1, num_classes)
+        is_different_class = y_query.unsqueeze(-1) != is_different_class
+        loss_matrix[is_different_class] = (loss_matrix[is_different_class] * -1).logsumexp(dim=-1)
+        num_classes_queries = y_query.shape[1]
+        loss_value = loss_matrix.sum() / num_classes_queries
+        return loss_value
 
-        ProgressBar().attach(trainer, ['train_loss', 'train_accuracy'])
+    def setup_training(self):
+        trainer = Engine(lambda e, b: self.train_step(b))
+        state_vars = dict(model=self.model, opt=self.opt, trainer=trainer)
+        checkpoint_handler = ModelCheckpoint(self.run_path, 'checkpoint', score_name='avg_loss', n_saved=2,
+                                             global_step_transform=lambda: trainer.state.epoch)
+        if checkpoint_handler.last_checkpoint:
+            checkpoint_handler.load_objects(state_vars, self.run_path / checkpoint_handler.last_checkpoint)
+        trainer.add_event_handler(Events.EPOCH_COMPLETED, lambda e: checkpoint_handler(e, state_vars))
+        trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration))
 
-        @trainer.on(Events.EPOCH_COMPLETED)
-        def save_model(engine):
-            torch.save(self.model.state_dict(), EMBEDDING_PATH)
+        RunningAverage(output_transform=lambda o: o['loss']).attach(trainer, 'running_avg_loss')
+        Average(lambda o: o['loss']).attach(trainer, 'avg_loss')
+        ProgressBar().attach(trainer, 'running_avg_loss')
+        logger.setup_logger(self.run_path, trainer, self.model)
 
-        @trainer.on(Events.EPOCH_COMPLETED)
-        def log_metrics(engine):
-            train_loss_ = engine.state.metrics['train_loss']
-            train_accuracy_ = engine.state.metrics['train_accuracy']
-            print("Epoch", engine.state.epoch)
-            print("Train loss", train_loss_, '-', 'Train Accuracy', train_accuracy_)
-            self.logger.add_scalar('loss/epoch_train', train_loss_, engine.state.epoch)
-            self.logger.add_scalar('accuracy/epoch_train', train_accuracy_, engine.state.epoch)
+        @trainer.on(Events.EPOCH_COMPLETED(every=5))
+        def eval_and_log(e: Engine):
+            eval_results = self.eval()
+            e.state['eval_results'] = eval_results
+            e.fire_event("EVAL_DONE")
 
-        if val_loader is not None:
-            setup_validation(trainer, self.model, val_loader, self.logger, self.test_step, val_len, self.best_val_loss_saver)
+        return trainer
 
-        trainer.run(train_loader, self.epochs, train_len)
+    def train(self):
+        trainer = self.setup_training()
 
+        trainer.run(self.train_dloader, self.train_epochs)
 
-def setup_validation(trainer, model: Module, val_loader, logger, step_f, val_len, saver=None):
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def validate_data(engine: Engine):
-        model.eval()
+    def eval(self):
+        """
+        Predict and calculate metrics on both train dataloader and validation dataloader. (train dataloader is optional)
+        :return:
+        :rtype:
+        """
+        validator = self.setup_evaluator()
+        result = dict()
+        if self.train_dloader is not None:
+            results_train = validator.run(self.train_dloader, max_epochs=1, epoch_length=self.val_steps)
+            result['train'] = results_train
+        results_val = validator.run(self.val_dloader, max_epochs=1, epoch_length=self.val_steps)
+        result['val'] = results_val
+        if self.train_dloader is not None:
+            print('Train accuracy:', results_train.metrics['accuracy'])
+        print('Validation accuracy:', results_val.metrics['accuracy'])
+        return result
 
-        val = Engine(step_f)
+    def setup_evaluator(self):
+        validator = Engine(lambda e, b: self.pred_calc_loss(b))
+        self.model.get_probabilities = True
 
-        @val.on(Events.EPOCH_STARTED)
-        def init_state(engine: Engine):
-            engine.state.sum_loss = 0.0
-            engine.state.sum_acc = 0.0
+        def get_y_pred_y(o: dict):
+            """
+            :param o: output of forward method
+            :return: tuple (y_pred, y)
+            """
+            return o['prob_query'].argmax(1).flatten(), o['batch']['y_query'].flatten()
 
-        @val.on(Events.ITERATION_COMPLETED)
-        def sum_stats(engine):
-            batch_loss, batch_acc = engine.state.output
-            engine.state.sum_loss += batch_loss
-            engine.state.sum_acc += batch_acc
-
-        @val.on(Events.EPOCH_COMPLETED)
-        def log_stats(engine):
-            mean_loss = engine.state.sum_loss / engine.state.iteration
-            mean_acc = engine.state.sum_acc / engine.state.iteration
-            if saver is not None:
-                saver.step(mean_loss)
-            print("Validation Loss", float(mean_loss), '-', 'Validation Accuracy', float(mean_acc))
-            logger.add_scalar('loss/epoch_val', mean_loss, trainer.state.epoch)
-            logger.add_scalar('accuracy/epoch_val', mean_acc, trainer.state.epoch)
-
-        with torch.no_grad():
-            val.run(val_loader, 1, val_len)
-
-        model.train()
+        RunningAverage(output_transform=lambda o: o['loss']).attach(validator, 'running_avg_loss')
+        Average(lambda o: o['loss']).attach(validator, 'avg_loss')
+        ProgressBar().attach(validator, 'running_avg_loss')
+        Accuracy(output_transform=get_y_pred_y, is_multilabel=True).attach(validator, 'accuracy')
+        return validator
