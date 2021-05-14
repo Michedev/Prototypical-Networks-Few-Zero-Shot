@@ -7,8 +7,6 @@ from ignite.engine import Engine, Events
 from ignite.metrics import RunningAverage
 from torch.nn import Module
 from torch.utils.tensorboard import SummaryWriter
-
-from paths import LOGFOLDER, EMBEDDING_PATH, BEST_EMBEDDING_PATH
 from tester import Tester
 
 

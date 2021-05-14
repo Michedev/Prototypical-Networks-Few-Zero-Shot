@@ -1,9 +1,20 @@
+import argparse
+
 import torch
+from path import Path
 
 from model import PrototypicalNetwork
-from paths import EMBEDDING_PATH, BEST_EMBEDDING_PATH
 from tester import Tester
 from fire import Fire
+
+
+def test_args():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--checkpoint', '-c', required=True, type=Path, dest='checkpoint')
+    argparser.add_argument('--support-size', '-s', default=None, type=int)
+    argparser.add_argument('--query-size', '-q', default=None, type=int)
+    argparser.add_argument('--num-classes', '--nc', default=None, type=int)
+
 
 
 def main(dataset: str, n: int, n_s: int, n_q: int, testsize: int, use_best=False, device: str = 'cpu'):
