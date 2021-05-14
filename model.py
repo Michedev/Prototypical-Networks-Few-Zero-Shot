@@ -1,8 +1,6 @@
 import torch
 from torch import nn
-
-from paths import EMBEDDING_PATH
-
+import tensorguard as tg
 
 def EmbeddingBlock(input_channels):
     return nn.Sequential(
@@ -34,6 +32,9 @@ class PrototypicalNetwork(nn.Module):
     def forward(self, X_supp, y_supp, X_query):
         num_classes = self.num_classes or (y_supp.max() + 1)
         bs, supp_size, c, h, w = X_supp.shape
+        tg.guard(X_supp, "BS, SUPP_SIZE, C, H, W")
+        tg.guard(y_supp, "BS, SUPP_SIZE")
+        tg.guard(X_query, "BS, QUERY_SIZE, C, H, W")
         query_size = X_query.shape[1]
         X_supp = X_supp.flatten(0, 1)
         X_query = X_query.flatten(0, 1)
@@ -47,10 +48,23 @@ class PrototypicalNetwork(nn.Module):
         return result
 
     def predict_proba(self, X_supp, y_supp, X_query):
+
         pred = self(X_supp, y_supp, X_query)
-        prob = (pred['embeddings_support'].unsqueeze(1) - pred['centroids'].unsqueeze(2))\
-                .pow(2).sum(dim=2).softmax(dim=1)
+        distance_matrix = (pred['embeddings_query'].unsqueeze(1) -
+                           pred['centroids'].unsqueeze(2))\
+                           .pow(2)  #[batch_size, num_classes, query_size * num_classes, emb_features]
+        prob = (- distance_matrix).sum(dim=2).softmax(dim=1)
         return prob
 
     def predict(self, X_supp, y_supp, X_query):
+        """
+        :param X_supp: train samples in a meta-learning task
+        :type X_supp: torch.Tensor
+        :param y_supp: train labels in a meta-learning task
+        :type y_supp: torch.Tensor
+        :param X_query: test samples in a meta-learning task
+        :type X_query: torch.Tensor
+        :return: The predicted class for each X_query samples
+        :rtype: torch.Tensor of shape [num_observarions,
+        """
         return self.predict_proba(X_supp, y_supp, X_query).argmax(dim=1)
