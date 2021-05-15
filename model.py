@@ -42,8 +42,9 @@ class PrototypicalNetwork(nn.Module):
         embeddings_query = self.embedding_nn(X_query).view(bs, query_size, -1)
         tg.guard(embeddings_supp, "*, SUPP_SIZE, NUM_FEATURES")
         tg.guard(embeddings_query, "*, QUERY_SIZE, NUM_FEATURES")
+        y_supp_broadcast = y_supp.unsqueeze(-1).expand(bs, supp_size, embeddings_supp.shape[-1])
         centroids = torch.zeros(bs, num_classes, embeddings_supp.shape[-1], device=X_supp.device)\
-                    .scatter_add(1, y_supp, embeddings_supp) / supp_size * num_classes
+                    .scatter_add(1, y_supp_broadcast, embeddings_supp) / supp_size * num_classes
         tg.guard(centroids, "*, NUM_CLASSES, NUM_FEATURES")
         result = dict(centroids=centroids,
                       embeddings_support=embeddings_supp,

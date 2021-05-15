@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 import torch
 from ignite.contrib.handlers import ProgressBar
+import tensorguard as tg
 from ignite.engine import Engine, Events
 from ignite.handlers import ModelCheckpoint, EarlyStopping
 from ignite.metrics import RunningAverage, Average, Accuracy
@@ -23,6 +24,7 @@ class Trainer:
 
     opt: Optional[torch.optim.Optimizer]
     device: str
+    epoch_length: int = 200
     eval_steps: Optional[int] = None
 
     def __post_init__(self):
@@ -65,13 +67,17 @@ class Trainer:
         :param y_query: Labels of query samples. Shape: [batch_size, query_size * num_classes]
         :return: the loss scalar value
         """
+        num_classes = centroids.shape[1]
         centroids = centroids.unsqueeze(1)
         embeddings_query = embeddings_query.unsqueeze(2)
         loss_matrix = self.distance_fun(centroids, embeddings_query).sum(
-            dim=-1)  # [batch_size, query_size * num_classes, num_classes]
-        num_classes = centroids.shape[1]
-        is_different_class = torch.arange(num_classes).view(1, 1, num_classes)
+            dim=-1)  # [batch_size, query_size, num_classes]
+        is_different_class = torch.arange(num_classes, device=y_query.device).view(1, 1, num_classes)
         is_different_class = y_query.unsqueeze(-1) != is_different_class
+        is_different_class = is_different_class.expand(is_different_class.shape[0], is_different_class.shape[1], num_classes)
+        tg.guard(is_different_class, "*, QUERY_SIZE, NUM_CLASSES")
+        tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
+
         loss_matrix[is_different_class] = (loss_matrix[is_different_class] * -1).logsumexp(dim=-1)
         num_classes_queries = y_query.shape[1]
         loss_value = loss_matrix.sum() / num_classes_queries
@@ -107,7 +113,7 @@ class Trainer:
     def train(self):
         trainer = self.setup_training()
 
-        trainer.run(self.train_dloader, self.train_epochs)
+        trainer.run(self.train_dloader, self.train_epochs, self.epoch_length)
 
     def eval(self):
         """
