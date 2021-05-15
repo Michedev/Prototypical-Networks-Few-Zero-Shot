@@ -58,8 +58,8 @@ class PrototypicalNetwork(nn.Module):
         Return probabilities
         :param X_supp:
         :param y_supp:
-        :param X_query:
-        :return:
+        :param X_query: 
+        :return: Tensor of probabilities - Shape: [batch_size, num_classes, query_size]
         """
         pred = self(X_supp, y_supp, X_query)
         prob = self._get_probabilities(pred)
@@ -75,10 +75,12 @@ class PrototypicalNetwork(nn.Module):
         distance_matrix = (pred['embeddings_query'].unsqueeze(1) -
                            pred['centroids'].unsqueeze(2)) \
             .pow(2)  # [batch_size, num_classes, query_size, emb_features]
-        log_prob_unscaled = (- distance_matrix).sum(dim=2)
+        tg.guard(distance_matrix, "*, NUM_CLASSES, QUERY_SIZE, NUM_FEATURES")
+        log_prob_unscaled = (- distance_matrix).sum(dim=-1)
         const_norm = log_prob_unscaled.logsumexp(dim=1, keepdim=True)
         log_prob = log_prob_unscaled - const_norm
         prob = log_prob.exp()
+        tg.guard(prob, "*, NUM_CLASSES, QUERY_SIZE")
         return prob
 
     def predict(self, X_supp, y_supp, X_query):

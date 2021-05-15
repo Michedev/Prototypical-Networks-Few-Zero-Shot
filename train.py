@@ -58,6 +58,7 @@ class Arguments(Namespace):
     batch_size: int = field(init=False)
     eval_steps: Optional[int] = field(init=False)
     run_path: Optional[Path] = field(init=False)
+    epoch_steps: int = field(init=False)
 
 
 def parse_args() -> Arguments:
@@ -81,16 +82,21 @@ def parse_args() -> Arguments:
                            help='Number of training epochs. Set by default to a very high value '
                                 'because paper specify that train continues until validation loss '
                                 'continues to decrease.')
+    argparser.add_argument('--epoch-steps', default=200, type=int, dest='epoch_steps')
     argparser.add_argument('--seed', default=None, type=int)
     argparser.add_argument('--device', type=str, default='cuda')
     argparser.add_argument('--batch-size', type=int, default=32)
-    argparser.add_argument('--eval-steps', type=int, default=None)
+    argparser.add_argument('--eval-steps', type=int, default=None,
+                           help='Number of evaluation steps. By default is set to the number of steps to reach 600 episodes considering batch size as paper reports')
     argparser.add_argument('--run-path', type=Path, default=None,
                            help='Set to resume a checkpoint', dest='run_path')
     args = argparser.parse_args(namespace=Arguments())
     if args.seed is None:
         args.seed = randint(0, 1_000_000)
         print('set seed to %s' % args.seed)
+    if args.eval_steps is None:
+        from math import ceil
+        args.eval_steps = int(ceil(600 / args.batch_size))
     if args.device.startswith('cuda'):
         if not torch.cuda.is_available():
             print('Cuda not available, fall back to cpu')
@@ -119,7 +125,8 @@ def main():
     model = PrototypicalNetwork(args.num_classes, input_channels=input_channels)
     opt = torch.optim.Adam(model.parameters(), 1e-3)
     trainer = Trainer(model, train_dloader, val_dloader, args.distance,
-                      experiment_path, args.epochs, opt, args.device, args.eval_steps )
+                      experiment_path, args.epochs, opt, args.device,
+                      args.eval_steps, args.epoch_steps)
     trainer.train()
 
 
