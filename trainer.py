@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Union
 
 import torch
@@ -24,8 +24,8 @@ class Trainer:
 
     opt: Optional[torch.optim.Optimizer]
     device: str
-    epoch_length: int = 200
     eval_steps: Optional[int] = None
+    epoch_length: int = field(init=False, default=200)
 
     def __post_init__(self):
         self.model = self.model.to(self.device)
@@ -74,32 +74,35 @@ class Trainer:
             dim=-1)  # [batch_size, query_size, num_classes]
         is_different_class = torch.arange(num_classes, device=y_query.device).view(1, 1, num_classes)
         is_different_class = y_query.unsqueeze(-1) != is_different_class
-        is_different_class = is_different_class.expand(is_different_class.shape[0], is_different_class.shape[1], num_classes)
+        is_different_class = is_different_class\
+            .expand(is_different_class.shape[0], is_different_class.shape[1], num_classes)
+        is_different_class = is_different_class.int()
         tg.guard(is_different_class, "*, QUERY_SIZE, NUM_CLASSES")
         tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
 
-        loss_matrix[is_different_class] = (loss_matrix[is_different_class] * -1).logsumexp(dim=-1)
+        loss_value = (loss_matrix * is_different_class * -1).logsumexp(dim=-1).sum()
+        loss_value += (loss_matrix * (1.0 - is_different_class)).sum()
         num_classes_queries = y_query.shape[1]
-        loss_value = loss_matrix.sum() / num_classes_queries
+        loss_value /= num_classes_queries
         return loss_value
 
     def setup_training(self):
         trainer = Engine(lambda e, b: self.train_step(b))
         trainer.register_events("EVAL_DONE")
+        Average(lambda o: o['loss']).attach(trainer, 'avg_loss')
         state_vars = dict(model=self.model, opt=self.opt, trainer=trainer)
         checkpoint_handler = ModelCheckpoint(self.run_path, 'checkpoint', score_function=lambda e: -e.state.metrics['avg_loss'],
-                                             score_name='neg_avg_loss', n_saved=2, global_step_transform=lambda: trainer.state.epoch)
+                                             score_name='neg_avg_loss', n_saved=2, global_step_transform=lambda e, evt_name: e.state.epoch)
         if checkpoint_handler.last_checkpoint:
             checkpoint_handler.load_objects(state_vars, self.run_path / checkpoint_handler.last_checkpoint)
         trainer.add_event_handler(Events.EPOCH_COMPLETED, lambda e: checkpoint_handler(e, state_vars))
         trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration))
 
         RunningAverage(output_transform=lambda o: o['loss']).attach(trainer, 'running_avg_loss')
-        Average(lambda o: o['loss']).attach(trainer, 'avg_loss')
         ProgressBar().attach(trainer, ['running_avg_loss'])
         logger.setup_logger(self.run_path, trainer, self.model)
 
-        @trainer.on(Events.EPOCH_COMPLETED(every=1))
+        @trainer.on(Events.EPOCH_COMPLETED)
         def eval_and_log(e: Engine):
             eval_results = self.eval()
             e.state['eval_results'] = eval_results
@@ -149,6 +152,6 @@ class Trainer:
 
         RunningAverage(output_transform=lambda o: o['loss']).attach(validator, 'running_avg_loss')
         Average(lambda o: o['loss']).attach(validator, 'avg_loss')
-        ProgressBar().attach(validator, 'running_avg_loss')
+        ProgressBar().attach(validator, ['running_avg_loss'])
         Accuracy(output_transform=get_y_pred_y, is_multilabel=True).attach(validator, 'accuracy')
         return validator

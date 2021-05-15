@@ -108,7 +108,7 @@ def main():
         experiment_path = args.run_path
     with open(experiment_path / 'config.yaml', 'w') as f:
         yaml.dump(args.__dict__, f)
-    print('config:', yaml.safe_dump(args.__dict__))
+    print('config:', yaml.safe_dump(args.__dict__), sep='\n')
     args.distance = distance_f(args.distance)
     args.device = torch.device(args.device)
     train_dataset = dataset_f(args, 'train')
