@@ -26,7 +26,7 @@ class Trainer:
     eval_steps: Optional[int] = None
 
     def __post_init__(self):
-        self.model.cuda()
+        self.model = self.model.to(self.device)
         self.lr_decay = torch.optim.lr_scheduler.StepLR(self.opt, 3_000, 0.5)
 
     def train_step(self, batch):
@@ -46,8 +46,10 @@ class Trainer:
         """
         X_supp, y_supp = batch['train']
         X_query, y_query = batch['test']
-        X_supp.to(self.device); y_supp.to(self.device)
-        X_query.to(self.device); y_query.to(self.device)
+        X_supp = X_supp.to(self.device)
+        y_supp = y_supp.to(self.device)
+        X_query = X_query.to(self.device)
+        y_query = y_query.to(self.device)
         pred_output = self.model(X_supp, y_supp, X_query)
         loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
         pred_output['loss'] = loss
