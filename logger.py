@@ -19,7 +19,6 @@ def setup_logger(experiment_path: Path, engine: Engine, model: torch.nn.Module, 
     @engine.on("EVAL_DONE")
     def log_eval_reuslts(engine):
         eval_results = engine.state['eval_results']
-        del engine.state['eval_results']
         for split in ['train', 'val']:
             accuracy_split = eval_results[split].metrics['accuracy']
             loss_split = eval_results[split].metrics['avg_loss']

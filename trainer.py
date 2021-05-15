@@ -4,7 +4,7 @@ from typing import Optional, Union
 import torch
 from ignite.contrib.handlers import ProgressBar
 from ignite.engine import Engine, Events
-from ignite.handlers import ModelCheckpoint
+from ignite.handlers import ModelCheckpoint, EarlyStopping
 from ignite.metrics import RunningAverage, Average, Accuracy
 from path import Path
 from torch.utils.data import DataLoader
@@ -21,12 +21,12 @@ class Trainer:
     run_path: Path
     train_epochs: int
 
-    opt: Optional[torch.optim.optimizer.Optimizer]
+    opt: Optional[torch.optim.Optimizer]
     device: str
-    val_steps: Optional[int] = None
+    eval_steps: Optional[int] = None
 
     def __post_init__(self):
-        self.model.to(self.device)
+        self.model.cuda()
         self.lr_decay = torch.optim.lr_scheduler.StepLR(self.opt, 3_000, 0.5)
 
     def train_step(self, batch):
@@ -77,9 +77,10 @@ class Trainer:
 
     def setup_training(self):
         trainer = Engine(lambda e, b: self.train_step(b))
+        trainer.register_events("EVAL_DONE")
         state_vars = dict(model=self.model, opt=self.opt, trainer=trainer)
-        checkpoint_handler = ModelCheckpoint(self.run_path, 'checkpoint', score_name='avg_loss', n_saved=2,
-                                             global_step_transform=lambda: trainer.state.epoch)
+        checkpoint_handler = ModelCheckpoint(self.run_path, 'checkpoint', score_function=lambda e: -e.state.metrics['avg_loss'],
+                                             score_name='neg_avg_loss', n_saved=2, global_step_transform=lambda: trainer.state.epoch)
         if checkpoint_handler.last_checkpoint:
             checkpoint_handler.load_objects(state_vars, self.run_path / checkpoint_handler.last_checkpoint)
         trainer.add_event_handler(Events.EPOCH_COMPLETED, lambda e: checkpoint_handler(e, state_vars))
@@ -87,14 +88,17 @@ class Trainer:
 
         RunningAverage(output_transform=lambda o: o['loss']).attach(trainer, 'running_avg_loss')
         Average(lambda o: o['loss']).attach(trainer, 'avg_loss')
-        ProgressBar().attach(trainer, 'running_avg_loss')
+        ProgressBar().attach(trainer, ['running_avg_loss'])
         logger.setup_logger(self.run_path, trainer, self.model)
 
-        @trainer.on(Events.EPOCH_COMPLETED(every=5))
+        @trainer.on(Events.EPOCH_COMPLETED(every=1))
         def eval_and_log(e: Engine):
             eval_results = self.eval()
             e.state['eval_results'] = eval_results
             e.fire_event("EVAL_DONE")
+
+        es = EarlyStopping(5, lambda o: - o['eval_results']['val'].metrics['avg_loss'], trainer)
+        trainer.add_event_handler("EVAL_DONE", es)
 
         return trainer
 
@@ -111,11 +115,14 @@ class Trainer:
         """
         validator = self.setup_evaluator()
         result = dict()
-        if self.train_dloader is not None:
-            results_train = validator.run(self.train_dloader, max_epochs=1, epoch_length=self.val_steps)
-            result['train'] = results_train
-        results_val = validator.run(self.val_dloader, max_epochs=1, epoch_length=self.val_steps)
-        result['val'] = results_val
+        self.model.eval()
+        with torch.no_grad():
+            if self.train_dloader is not None:
+                results_train = validator.run(self.train_dloader, max_epochs=1, epoch_length=self.eval_steps)
+                result['train'] = results_train
+            results_val = validator.run(self.val_dloader, max_epochs=1, epoch_length=self.eval_steps)
+            result['val'] = results_val
+        self.model.train()
         if self.train_dloader is not None:
             print('Train accuracy:', results_train.metrics['accuracy'])
         print('Validation accuracy:', results_val.metrics['accuracy'])

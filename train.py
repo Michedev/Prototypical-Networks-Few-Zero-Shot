@@ -11,7 +11,7 @@ from torchmeta.utils.data import BatchMetaDataLoader
 from torchmeta.transforms import Categorical, Rotation
 
 from model import PrototypicalNetwork
-from paths import new_experiment_path
+from paths import new_experiment_path, DATAFOLDER
 from trainer import Trainer
 from utils import set_all_seeds
 
@@ -29,14 +29,15 @@ def dataset_f(args, meta_split: Literal['train', 'val', 'test'] = None):
     if meta_split is None:
         meta_split = 'train'
     dataset = args.dataset
-    dataset_kwargs = dict(folder=f'data/{dataset}',
+    dataset_kwargs = dict(folder=DATAFOLDER,
                           shots=args.support_samples,
-                          ways=args.classes,
+                          ways=args.num_classes,
                           shuffle=True,
                           test_shots=args.query_samples,
                           seed=args.seed,
                           meta_train=True,
-                          target_transform=Categorical(num_classes=5),
+                          target_transform=Categorical(num_classes=args.num_classes),
+                          download=True
                           )
     if dataset == 'omniglot':
         return omniglot(**dataset_kwargs, class_augmentations=[Rotation([90, 180, 270])], )
@@ -55,7 +56,7 @@ class Arguments(Namespace):
     seed: int = field(init=False)
     device: str = field(init=False)
     batch_size: int = field(init=False)
-    val_steps: Optional[int] = field(init=False)
+    eval_steps: Optional[int] = field(init=False)
     run_path: Optional[Path] = field(init=False)
 
 
@@ -69,18 +70,21 @@ def parse_args() -> Arguments:
     argparser.add_argument('--support-samples', '-s', required=True, default=1, type=int, dest='support_samples',
                            help='Number of training samples for each class in meta learning '
                                 'i.e. the K in N-way with K shots')
-    argparser.add_argument('--query-samples', '-q', required=True, default=5,
+    argparser.add_argument('--query-samples', '-q', default=5,
                            type=int, dest='query_samples',
                            help='Number of test samples for each class in meta learning')
-    argparser.add_argument('--distance', '--dst', required=True,
-                           default='euclidean', type=distance_f,
+    argparser.add_argument('--distance', '--dst',
+                           default='euclidean', type=str,
                            choices=['euclidean', 'cosine'],
                            help='Distance function to use inside PrototypicalNetwork')
-    argparser.add_argument('--epochs', '-e', required=True, default=1_000)
+    argparser.add_argument('--epochs', '-e', default=1_000,
+                           help='Number of training epochs. Set by default to a very high value '
+                                'because paper specify that train continues until validation loss '
+                                'continues to decrease.')
     argparser.add_argument('--seed', default=None, type=int)
     argparser.add_argument('--device', type=str, default='cuda')
     argparser.add_argument('--batch-size', type=int, default=32)
-    argparser.add_argument('--val-steps', type=int, default=None)
+    argparser.add_argument('--eval-steps', type=int, default=None)
     argparser.add_argument('--run-path', type=Path, default=None,
                            help='Set to resume a checkpoint', dest='run_path')
     args = argparser.parse_args(namespace=Arguments())
@@ -99,18 +103,23 @@ def main():
     args = parse_args()
     if args.run_path is None:
         experiment_path = new_experiment_path()
+        print('Experiment run:', str(experiment_path))
     else:
         experiment_path = args.run_path
     with open(experiment_path / 'config.yaml', 'w') as f:
-        yaml.dump(dict(args), f)
+        yaml.dump(args.__dict__, f)
+    print('config:', yaml.safe_dump(args.__dict__))
+    args.distance = distance_f(args.distance)
+    args.device = torch.device(args.device)
     train_dataset = dataset_f(args, 'train')
     val_dataset = dataset_f(args, 'val')
     train_dloader = BatchMetaDataLoader(train_dataset, args.batch_size, shuffle=True)
     val_dloader = BatchMetaDataLoader(val_dataset, args.batch_size, shuffle=True)
-    model = PrototypicalNetwork(args.num_classes)
+    input_channels = 1 if args.dataset == 'omniglot' else 3
+    model = PrototypicalNetwork(args.num_classes, input_channels=input_channels)
     opt = torch.optim.Adam(model.parameters(), 1e-3)
     trainer = Trainer(model, train_dloader, val_dloader, args.distance,
-                      experiment_path, args.epochs, opt, args.val_steps, args.device)
+                      experiment_path, args.epochs, opt, args.device, args.eval_steps )
     trainer.train()
 
 
