@@ -44,10 +44,10 @@ class Trainer:
         :return:
         :rtype:
         """
-        for k in batch:
-            batch[k].to(self.device)
         X_supp, y_supp = batch['train']
         X_query, y_query = batch['test']
+        X_supp.to(self.device); y_supp.to(self.device)
+        X_query.to(self.device); y_query.to(self.device)
         pred_output = self.model(X_supp, y_supp, X_query)
         loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
         pred_output['loss'] = loss
