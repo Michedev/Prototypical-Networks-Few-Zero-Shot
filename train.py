@@ -76,7 +76,7 @@ class Arguments(Namespace):
 def parse_args() -> Arguments:
     argparser = ArgumentParser()
     argparser.add_argument('--dataset', '-d',
-                           choices=['omniglot', 'miniimagenet', 'cub-zero-shot'],
+                           choices=['omniglot', 'miniimagenet', 'cub'],
                            dest='dataset', help='Specify train dataset')
     argparser.add_argument('--classes', '--num-classes', '-c', default=5, type=int, dest='num_classes',
                            help='Number of classes for each task in meta learning i.e. the N in N-way with K shots')

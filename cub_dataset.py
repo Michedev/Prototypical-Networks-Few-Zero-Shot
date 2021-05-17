@@ -15,6 +15,7 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
         assert split in ['train', 'val', 'test']
         if isinstance(root, str):
             root = Path(root)
+        root = root / 'cub'
         self.root = root
         self.num_classes = num_classes
         self.class_list = self._load_class_list(split)
