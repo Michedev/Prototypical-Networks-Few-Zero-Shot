@@ -24,13 +24,18 @@ class Trainer:
     train_epochs: int
 
     opt: Optional[torch.optim.Optimizer]
-    device: str
+    device: Union[str, torch.device]
+    use_lr_decay: bool
+    lr_decay_gamma: float = None
+    lr_decay_steps: int = None
     eval_steps: Optional[int] = None
     epoch_steps: int = field(init=True, default=200)
+    zero_shot: bool = False
 
     def __post_init__(self):
         self.model = self.model.to(self.device)
-        self.lr_decay = torch.optim.lr_scheduler.StepLR(self.opt, 3_000, 0.5)
+        if self.use_lr_decay:
+            self.lr_decay = torch.optim.lr_scheduler.StepLR(self.opt, self.lr_decay_steps, self.lr_decay_gamma)
 
     def train_step(self, batch):
         self.opt.zero_grad()
@@ -47,13 +52,18 @@ class Trainer:
         :return:
         :rtype:
         """
-        X_supp, y_supp = batch['train']
         X_query, y_query = batch['test']
-        X_supp = X_supp.to(self.device)
-        y_supp = y_supp.to(self.device)
         X_query = X_query.to(self.device)
         y_query = y_query.to(self.device)
-        pred_output = self.model(X_supp, y_supp, X_query)
+        if self.zero_shot:
+            classes_metadata = batch['meta']
+            classes_metadata = classes_metadata.to(self.device)
+            pred_output = self.model(classes_metadata, X_query)
+        else:
+            X_supp, y_supp = batch['train']
+            X_supp = X_supp.to(self.device)
+            y_supp = y_supp.to(self.device)
+            pred_output = self.model(X_supp, y_supp, X_query)
         loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
         pred_output['loss'] = loss
         pred_output['batch'] = batch
@@ -73,16 +83,16 @@ class Trainer:
         embeddings_query = embeddings_query.unsqueeze(2)
         loss_matrix = self.distance_fun(centroids, embeddings_query).sum(
             dim=-1)  # [batch_size, query_size, num_classes]
-        is_different_class = torch.arange(num_classes, device=y_query.device).view(1, 1, num_classes)
-        is_different_class = y_query.unsqueeze(-1) != is_different_class
-        is_different_class = is_different_class\
-            .expand(is_different_class.shape[0], is_different_class.shape[1], num_classes)
-        is_different_class = is_different_class.int()
-        tg.guard(is_different_class, "*, QUERY_SIZE, NUM_CLASSES")
+        index_correct_class = torch.arange(num_classes, device=y_query.device).view(1, 1, num_classes)
+        index_correct_class = y_query.unsqueeze(-1) == index_correct_class
+        index_correct_class = index_correct_class\
+            .expand(index_correct_class.shape[0], index_correct_class.shape[1], num_classes)
+        index_correct_class = index_correct_class.int()
+        tg.guard(index_correct_class, "*, QUERY_SIZE, NUM_CLASSES")
         tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
 
-        loss_value = (loss_matrix * is_different_class * -1).logsumexp(dim=-1).sum()
-        loss_value += (loss_matrix * (1.0 - is_different_class)).sum()
+        loss_value = (loss_matrix * -1).logsumexp(dim=-1).sum()
+        loss_value += (loss_matrix * index_correct_class).sum()
         num_classes_queries = y_query.shape[1]
         loss_value /= num_classes_queries
         return loss_value
@@ -97,7 +107,8 @@ class Trainer:
         if checkpoint_handler.last_checkpoint:
             checkpoint_handler.load_objects(state_vars, self.run_path / checkpoint_handler.last_checkpoint)
         trainer.add_event_handler(Events.EPOCH_COMPLETED, lambda e: checkpoint_handler(e, state_vars))
-        trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration))
+        if self.use_lr_decay:
+            trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration))
 
         RunningAverage(output_transform=lambda o: o['loss']).attach(trainer, 'running_avg_loss')
         ProgressBar().attach(trainer, ['running_avg_loss'])
@@ -147,7 +158,7 @@ class Trainer:
         def get_y_pred_y(o: dict):
             """
             :param o: output of forward method
-            :return: tuple (y_pred, y)
+            :return: tuple (y_pred, y) both with shape [batch_size * query_size, num_classes] in OHE
             """
             y_pred, y =  o['prob_query'].argmax(1).flatten(), o['batch']['test'][1].flatten()
             num_classes = y.max()+1

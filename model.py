@@ -65,7 +65,8 @@ class PrototypicalNetwork(nn.Module):
         prob = self._get_probabilities(pred)
         return prob
 
-    def _get_probabilities(self, pred):
+    @staticmethod
+    def _get_probabilities(pred):
         """
         
         :param pred: Prediction dictionary of forward method. Must include keys 'embeddings_query' and 'centroids'
@@ -91,7 +92,42 @@ class PrototypicalNetwork(nn.Module):
         :type y_supp: torch.Tensor
         :param X_query: test samples in a meta-learning task
         :type X_query: torch.Tensor
-        :return: The predicted class for each X_query samples
-        :rtype: torch.Tensor of shape [num_observarions, query_size]
+        :return: The predicted class for each X_query samples - Shape [num_observarions, query_size]
+        :rtype: torch.Tensor
         """
         return self.predict_proba(X_supp, y_supp, X_query).argmax(dim=1)
+
+
+class PrototypicalNetworkZeroShot(nn.Module):
+
+    def __init__(self, num_classes: int = None, get_probabilities: bool = False,
+                 meta_features: int = 312, img_features: int = 1024):
+        super().__init__()
+        self.meta_features = meta_features
+        self.img_features = img_features
+        self.get_probabilities = get_probabilities
+        self.num_classes = num_classes
+        self.linear_img = nn.Linear(img_features, img_features)
+        self.linear_meta = nn.Linear(meta_features, img_features)
+
+    def forward(self, meta_classes, X_query):
+        centroids = self.linear_meta(meta_classes)
+        centroids = centroids / centroids.sum(dim=-1, keepdim=True)  # unit norm because paper says that
+        embeddings_query = self.linear_img(X_query)
+        return dict(centroids=centroids,
+                    embeddings_query=embeddings_query)
+
+    def predict_proba(self, meta_classes, X_query):
+        pred = self(meta_classes, X_query)
+        return PrototypicalNetwork._get_probabilities(pred)
+
+    def predict(self, meta_classes, X_query):
+        """
+        :param meta_classes: metadata features for classes - Shape [batch_size, num_classes, num_metadata_features]
+        :type X_supp: torch.Tensor
+        :param X_query: test samples in a meta-learning task
+        :type X_query: torch.Tensor
+        :return: The predicted class for each X_query samples - Shape [num_observarions, query_size]
+        :rtype: torch.Tensor
+        """
+        return self.predict_proba(meta_classes, X_query).argmax(dim=1)

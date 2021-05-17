@@ -1,11 +1,24 @@
 # Prototypical Networks
 Pytorch implementation of [Prototypical Networks Paper](https://arxiv.org/abs/1703.05175)
+## Reproduce Environment
+
+To reproduce the working environment for this project 
+create a new conda environment with the following command:
+
+    conda env create -f environment.yaml  #environment with cuda dependencies
+    # to create an environment without cuda: conda env create -f environment-cpuonly.yaml
+
+If you don't have the command _conda_ install it  from
+[anaconda](https://www.anaconda.com/) or [miniconda](https://conda.io/miniconda.html)
+
 ## Mini-Imagenet results
 
-- Loaded from _model_weights/embedding.pth_
 - Run 600 episodes
 
-|   |Mean|Std|
+TODO: redo this table 
+
+
+|   |Mean|Std| 
 |---|---|---|
 |_Test loss_|4.01|1.31|
 |_Test accuracy_|0.503|0.101|
@@ -14,48 +27,62 @@ Pytorch implementation of [Prototypical Networks Paper](https://arxiv.org/abs/17
 _Makefile_ contains the same parameters that I've used to train and get test results. <br>
 - To train the model for mini-imagenet just digit into a terminal `make train-miniimagenet`
 - To get test results with trained model at path _model_weights/embedding.pth_ digit `make test-miniimagenet`
+
+### Resume training
+
+To resume an interrupted training use the argument _--run-path_ of _train.py_. 
+An example is: `python train.py --run-path=run/0`
+
+### Project structure
+
+Project structure is very straightforward and flatten to maintain simplicity.
+
+    ├── data  # where data will be downloaded
+    │   └── omniglot   #contains omniglot data
+    ├── environment-cpuonly.yaml  #conda cpu environmnet
+    ├── environment.yaml   # conda environmnet to run this project
+    ├── logger.py   #  logging function with tensorboard
+    ├── Makefile   
+    ├── model.py
+    ├── paper.pdf
+    ├── paths.py
+    ├── readme.md
+    ├── run  # where experiments will be stored 
+    │   └── 0   # experiments are stored using index based folder name
+    ├── test.py
+    ├── trainer.py
+    ├── train.py
+    └── utils.py
+
+
 ### Custom Train 
 If you want to train by yourself the model you can train directly by running `python3 train.py`.
 The script supports many arguments which are:
     
-    SYNOPSIS
-        train.py DATASET TRAIN_N VAL_N TEST_N N_S N_Q <flags>
+    usage: train.py [-h] --dataset {omniglot,miniimagenet} --classes NUM_CLASSES --support-samples SUPPORT_SAMPLES [--query-samples QUERY_SAMPLES] [--distance {euclidean,cosine}] [--epochs EPOCHS]
+                    [--epoch-steps EPOCH_STEPS] [--seed SEED] [--device DEVICE] [--batch-size BATCH_SIZE] [--eval-steps EVAL_STEPS] [--run-path RUN_PATH]
     
-    DESCRIPTION
-        Train the model and save under model_weights both last epoch moodel (model_weights/embedding.pth) and the one with lowest validation loss (model_weights/best_embedding.pth)
-    
-    POSITIONAL ARGUMENTS
-        DATASET
-            train dataset; can be 'omniglot' or 'miniimagenet' [str]
-        TRAIN_N
-            num classes in train split (i.e. n in meta learning) [int]
-        VAL_N
-            num classes in val split (i.e. n in meta learning) [int]
-        TEST_N
-            num classes in test split (i.e. n in meta learning) [int]
-        N_S
-            size of support set for each task (see paper for more details) [int]
-        N_Q
-            size of query set for each task (see paper for more details) [int]
-    
-    FLAGS
-        --epochs=EPOCHS
-            Num epochs of training [int]
-        --batch_size=BATCH_SIZE
-            Batch size [int]
-        --lr=LR
-            learning rate [float]
-        --trainsize=TRAINSIZE
-            Size of training set. Remember thought that instances are sampled randomly therefore it's useful only to set switch between training and validation. [int]
-        --valsize=VALSIZE
-            Size of validation set. [int]
-        --testsize=TESTSIZE
-            Size of test set. [int]
-        --device=DEVICE
-            location of data and model parameters. Can be 'cpu' or 'cuda:*'
-    
-    NOTES
-        You can also use flags syntax for POSITIONAL ARGUMENTS
+    optional arguments:
+      -h, --help            show this help message and exit
+      --dataset {omniglot,miniimagenet}, -d {omniglot,miniimagenet}
+                            Specify train dataset
+      --classes NUM_CLASSES, --num-classes NUM_CLASSES, -c NUM_CLASSES
+                            Number of classes for each task in meta learning i.e. the N in N-way with K shots
+      --support-samples SUPPORT_SAMPLES, -s SUPPORT_SAMPLES
+                            Number of training samples for each class in meta learning i.e. the K in N-way with K shots
+      --query-samples QUERY_SAMPLES, -q QUERY_SAMPLES
+                            Number of test samples for each class in meta learning
+      --distance {euclidean,cosine}, --dst {euclidean,cosine}
+                            Distance function to use inside PrototypicalNetwork
+      --epochs EPOCHS, -e EPOCHS
+                            Number of training epochs. Set by default to a very high value because paper specify that train continues until validation loss continues to decrease.
+      --epoch-steps EPOCH_STEPS
+      --seed SEED
+      --device DEVICE
+      --batch-size BATCH_SIZE
+      --eval-steps EVAL_STEPS
+                            Number of evaluation steps. By default is set to the number of steps to reach 600 episodes considering batch size as paper reports
+      --run-path RUN_PATH   Set to resume a checkpoint
 
 ### Custom Test
 
