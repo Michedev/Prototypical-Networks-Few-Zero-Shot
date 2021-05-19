@@ -65,19 +65,21 @@ def make_table_eval():
                 eval_num_classes = eval_results['num_classes']
                 eval_accuracy = eval_results['avg_accuracy']
                 eval_loss = eval_results['avg_loss']
-                table['dataset'].append(train_dataset)
-                table['train_query_samples'].append(train_query_samples)
-                table['train_support_samples'].append(train_support_samples)
-                table['train_num_classes'].append(train_num_classes)
-                table['eval_query_samples'].append(eval_query_samples)
-                table['eval_support_samples'].append(eval_support_samples)
-                table['eval_num_classes'].append(eval_num_classes)
-                table['eval_accuracy'].append(eval_accuracy)
-                table['eval_loss'].append(eval_loss)
+                table['Dataset'].append(train_dataset)
+                table['Train num classes'].append(train_num_classes)
+                table['Train support samples'].append(train_support_samples)
+                table['Train query samples'].append(train_query_samples)
+                table['Test num classes'].append(eval_num_classes)
+                table['Test support samples'].append(eval_support_samples)
+                table['Test query samples'].append(eval_query_samples)
+                table['Test accuracy'].append(eval_accuracy)
+                table['Test loss'].append(eval_loss)
     table = pd.DataFrame(table)
-    aggr_table = table.pivot_table(['eval_accuracy', 'eval_loss'], columns=table.columns.drop(['eval_accuracy', 'eval_loss']),
-                                   aggfunc=dict(eval_accuracy='max', eval_loss='min'))
-    print(aggr_table.to_markdown())
+    aggr_table = table.pivot_table(columns=table.columns.drop(['Test accuracy', 'Test loss']).tolist(),
+                                   aggfunc={'Test accuracy': 'max', 'Test loss':'min'})
+    print(aggr_table.T.to_markdown())
+    print(aggr_table.T)
+    aggr_table.T.to_csv('eval_results.csv')
 
 
 cmds = {

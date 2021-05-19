@@ -18,10 +18,20 @@ If you don't have the command _conda_ install it  from
 TODO: redo this table 
 
 
-|   |Mean|Std| 
-|---|---|---|
-|_Test loss_|4.01|1.31|
-|_Test accuracy_|0.503|0.101|
+| Dataset       | Train num classes | Train support samples | Train query samples | Test num classes | Test support samples | Test query samples | Test accuracy | Test loss |
+|---------------|-------------------|-----------------------|---------------------|------------------|----------------------|--------------------|---------------|-----------|
+| Mini Imagenet | 20                | 5                     | 15                  | 5                | 1                    | 1                  | 41.36%        | 41.76     |
+| Mini Imagenet | 20                | 5                     | 15                  | 5                | 5                    | 5                  | 64.92%        | 14.64     |
+| Mini Imagenet | 30                | 1                     | 15                  | 5                | 1                    | 1                  | 45.02%        | 21.26     |
+| Mini Imagenet | 30                | 1                     | 15                  | 5                | 5                    | 5                  | 60.55%        | 17.75     |
+| Omniglot      | 60                | 1                     | 5                   | 5                | 1                    | 1                  | 98.73%        | 0.81      |
+| Omniglot      | 60                | 1                     | 5                   | 5                | 5                    | 5                  | 99.67%        | 0.22      |
+| Omniglot      | 60                | 1                     | 5                   | 20               | 1                    | 1                  | 95.74%        | 2.65      |
+| Omniglot      | 60                | 1                     | 5                   | 20               | 5                    | 5                  | 99.01%        | 0.61      |
+| Omniglot      | 60                | 5                     | 5                   | 5                | 1                    | 1                  | 97.79%        | 1.77      |
+| Omniglot      | 60                | 5                     | 5                   | 5                | 5                    | 5                  | 99.65%        | 0.28      |
+| Omniglot      | 60                | 5                     | 5                   | 20               | 1                    | 1                  | 93.55%        | 5.15      |
+| Omniglot      | 60                | 5                     | 5                   | 20               | 5                    | 5                  | 98.84%        | 0.79      |
 
 ##CUB Dataset
 
