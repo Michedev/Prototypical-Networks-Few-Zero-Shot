@@ -80,6 +80,9 @@ class Arguments(Namespace):
     epoch_steps: int = field(init=False)
     metadata_features: Optional[int] = field(init=False)
     image_features: Optional[int] = field(init=False)
+    use_early_stop: bool = field(init=False)
+    early_stop_patience: int = field(init=False)
+    early_stop_delta: float = field(init=False)
 
 
 def parse_args() -> Arguments:
@@ -131,6 +134,11 @@ def parse_args() -> Arguments:
                            help='Multiplicative factor to apply to lr decay')
     argparser.add_argument('--lr-decay-steps', default=None, type=int, dest='lr_decay_steps',
                            help='Number of steps to apply lr decay')
+    argparser.add_argument('--early-stop', default=True, type=bool, dest='use_early_stop',
+                           help='Enable early stop based on validation loss')
+    argparser.add_argument('--early-stop-patience', '--es-patience', dest='early_stop_patience',
+                           default=3, type=int)
+    argparser.add_argument('--early-stop-delta', dest='early_stop_delta', default=0.0, type=float)
     args = argparser.parse_args(namespace=Arguments())
 
     if args.run_path is not None:
@@ -196,7 +204,9 @@ def main():
                       device=args.device,
                       eval_steps=args.eval_steps,
                       epoch_steps=args.epoch_steps,
-                      zero_shot=zero_shot)
+                      zero_shot=zero_shot, use_early_stop=args.use_early_stop,
+                      early_stop_delta=args.early_stop_delta,
+                      early_stop_patience=args.early_stop_patience)
     trainer.train()
 
 

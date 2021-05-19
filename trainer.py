@@ -28,6 +28,9 @@ class Trainer:
     opt: Optional[torch.optim.Optimizer]
     device: Union[str, torch.device]
     use_lr_decay: bool
+    use_early_stop: bool
+    early_stop_delta: float
+    early_stop_patience: int
     lr_decay_gamma: float = None
     lr_decay_steps: int = None
     eval_steps: Optional[int] = None
@@ -123,8 +126,10 @@ class Trainer:
             e.state.eval_results = eval_results
             e.fire_event("EVAL_DONE")
 
-        es = EarlyStopping(3, lambda e: - e.state.eval_results['val'].metrics['avg_loss'], trainer)
-        trainer.add_event_handler("EVAL_DONE", es)
+        if self.use_early_stop:
+            es = EarlyStopping(self.early_stop_patience, lambda e: - e.state.eval_results['val'].metrics['avg_loss'],
+                               trainer, min_delta=self.early_stop_delta)
+            trainer.add_event_handler("EVAL_DONE", es)
 
         return trainer
 
