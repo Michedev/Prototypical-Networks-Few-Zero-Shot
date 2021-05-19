@@ -10,6 +10,9 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
     Cub Dataset which returns images refined from GoogleLeNet and class metadata.
     Image metadata have 1024 features while metadata have 312 features.
     """
+    
+    embedding_images = None
+    
     def __init__(self, root: Union[str, Path], split: Literal['train', 'val', 'test'],
                  query_size: int, num_classes: int):
         assert split in ['train', 'val', 'test']
@@ -22,9 +25,15 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
         self.split = split
         self.label_attributes = self._load_global_class_attributes()
         self.folder_image_features: Path = self.root / 'images'
+        if self.embedding_images is None:
+            self.embedding_images = dict()
+            for f in self.folder_image_features.files():
+                self.embedding_images[f] = torch.load(f)
         self.query_size = query_size
         self.class_combinations = list(combinations(self.class_list, num_classes))
         self.query_index = [(i, j) for i in range(60) for j in range(10)]
+        if split == 'test':
+            self.query_index = [(i, 0) for i in range(60)]
         self.query_combinations = list(combinations(self.query_index, query_size))
         self.label_map = {c: i for i, c in enumerate(self.class_list)}
         self.label_global_index = {c: int(c[:3])-1 for c in self.class_list}
@@ -42,7 +51,7 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
         for i, class_fname in enumerate(query_classes):
             class_global_index = self.label_global_index[class_fname]
             meta_features[i] = self.label_attributes[class_global_index]
-            class_image_features = torch.load(self.folder_image_features / class_fname)
+            class_image_features = self.embedding_images[class_fname]
             for i_row, i_split in query_indexes:
                 label[counter] = i
                 img_features[counter, :] = class_image_features[i_row, :, i_split]
