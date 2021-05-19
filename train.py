@@ -95,7 +95,7 @@ def parse_args() -> Arguments:
                                 'because paper specify that train continues until validation loss '
                                 'continues to decrease.')
     argparser.add_argument('--epoch-steps', default=200, type=int, dest='epoch_steps')
-    argparser.add_argument('--seed', default=None, type=int)
+    argparser.add_argument('--seed', default=13, type=int)
     argparser.add_argument('--device', type=str, default='cuda')
     argparser.add_argument('--batch-size', type=int, default=32)
     argparser.add_argument('--eval-steps', type=int, default=None,

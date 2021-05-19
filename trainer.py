@@ -1,7 +1,9 @@
+import timeit
 from dataclasses import dataclass, field
 from typing import Optional, Union
 
 import torch
+from torch.cuda.amp import autocast
 from torch.nn.functional import one_hot
 from ignite.contrib.handlers import ProgressBar
 import tensorguard as tg
@@ -55,16 +57,17 @@ class Trainer:
         X_query, y_query = batch['test']
         X_query = X_query.to(self.device)
         y_query = y_query.to(self.device)
-        if self.zero_shot:
-            classes_metadata = batch['meta']
-            classes_metadata = classes_metadata.to(self.device)
-            pred_output = self.model(classes_metadata, X_query)
-        else:
-            X_supp, y_supp = batch['train']
-            X_supp = X_supp.to(self.device)
-            y_supp = y_supp.to(self.device)
-            pred_output = self.model(X_supp, y_supp, X_query)
-        loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
+        with autocast():
+            if self.zero_shot:
+                classes_metadata = batch['meta']
+                classes_metadata = classes_metadata.to(self.device)
+                pred_output = self.model(classes_metadata, X_query)
+            else:
+                X_supp, y_supp = batch['train']
+                X_supp = X_supp.to(self.device)
+                y_supp = y_supp.to(self.device)
+                pred_output = self.model(X_supp, y_supp, X_query)
+            loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
         pred_output['loss'] = loss
         pred_output['batch'] = batch
         return pred_output
@@ -132,18 +135,31 @@ class Trainer:
 
     def eval(self):
         """
-        Predict and calculate metrics on both train dataloader and validation dataloader. (train dataloader is optional)
-        :return:
-        :rtype:
+        Predict and calculate metrics on both train dataloader and validation dataloader.
+            (train dataloader is optional for this method)
+        :return: Evaluation dict - Relevant features are ['train', 'val'] which are
+                 ignite.State who contains: <br>
+                 - result['train'].metrics['accuracy'] <br>
+                 - result['train'].metrics['avg_loss'] <br>
+                 - result['val'].metrics['accuracy'] <br>
+                 - result['val'].metrics['avg_loss']
+
+        :rtype: dict
         """
         validator = self.setup_evaluator()
         result = dict()
         self.model.eval()
         with torch.no_grad():
             if self.train_dloader is not None:
+                start = timeit.default_timer()
                 results_train = validator.run(self.train_dloader, max_epochs=1, epoch_length=self.eval_steps)
+                end = timeit.default_timer()
+                results_train.eval_duration_seconds = end - start
                 result['train'] = results_train
+            start = timeit.default_timer()
             results_val = validator.run(self.val_dloader, max_epochs=1, epoch_length=self.eval_steps)
+            end = timeit.default_timer()
+            results_val.eval_duration_seconds = end - start
             result['val'] = results_val
         self.model.train()
         if self.train_dloader is not None:
@@ -160,7 +176,7 @@ class Trainer:
             :param o: output of forward method
             :return: tuple (y_pred, y) both with shape [batch_size * query_size, num_classes] in OHE
             """
-            y_pred, y =  o['prob_query'].argmax(1).flatten(), o['batch']['test'][1].flatten()
+            y_pred, y = o['prob_query'].argmax(1).flatten(), o['batch']['test'][1].flatten()
             num_classes = y.max()+1
             y_pred = one_hot(y_pred, num_classes)
             y = one_hot(y, num_classes)

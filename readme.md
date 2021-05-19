@@ -11,7 +11,7 @@ create a new conda environment with the following command:
 If you don't have the command _conda_ install it  from
 [anaconda](https://www.anaconda.com/) or [miniconda](https://conda.io/miniconda.html)
 
-## Mini-Imagenet results
+## Repo results
 
 - Run 600 episodes
 
@@ -23,10 +23,14 @@ TODO: redo this table
 |_Test loss_|4.01|1.31|
 |_Test accuracy_|0.503|0.101|
 
-## How to run
-_Makefile_ contains the same parameters that I've used to train and get test results. <br>
-- To train the model for mini-imagenet just digit into a terminal `make train-miniimagenet`
-- To get test results with trained model at path _model_weights/embedding.pth_ digit `make test-miniimagenet`
+##CUB Dataset
+
+To reproduce the results of Zero Shot CUB dataset download the preprocessed dataset
+at this [link](https://mega.nz/file/iDpXCCaL#j5AI-LKKJqgygjIsWtBN1Ow_-yDs1f36Ki8PHtesgB0).
+
+It contains GoogleLeNet visual features of CUB images and class features 
+used as metadata features.
+
 
 ### Resume training
 

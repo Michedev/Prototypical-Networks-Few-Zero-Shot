@@ -1,0 +1,22 @@
+#eval parameter for each dataset to replicate paper results.
+
+miniimagenet:
+  - num_classes: 5
+    query_samples: 1
+    support_samples: 1
+  - num_classes: 5
+    query_samples: 5
+    support_samples: 5
+omniglot:
+  - num_classes: 5
+    query_samples: 1
+    support_samples: 1
+  - num_classes: 5
+    query_samples: 5
+    support_samples: 5
+  - num_classes: 20
+    query_samples: 1
+    support_samples: 1
+  - num_classes: 20
+    query_samples: 5
+    support_samples: 5
