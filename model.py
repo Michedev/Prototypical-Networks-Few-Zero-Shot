@@ -30,22 +30,22 @@ class PrototypicalNetwork(nn.Module):
         self.embedding_nn = embedding_module(input_channels)
 
     def forward(self, X_supp, y_supp, X_query):
-        num_classes = self.num_classes or (y_supp.max() + 1)
+        num_classes = y_supp.max() + 1
         bs, supp_size, c, h, w = X_supp.shape
-        tg.guard(X_supp, "*, SUPP_SIZE, C, H, W")
-        tg.guard(y_supp, "*, SUPP_SIZE")
-        tg.guard(X_query, "*, QUERY_SIZE, C, H, W")
+#         tg.guard(X_supp, "*, SUPP_SIZE, C, H, W")
+#         tg.guard(y_supp, "*, SUPP_SIZE")
+#         tg.guard(X_query, "*, QUERY_SIZE, C, H, W")
         query_size = X_query.shape[1]
         X_supp = X_supp.flatten(0, 1)
         X_query = X_query.flatten(0, 1)
         embeddings_supp = self.embedding_nn(X_supp).view(bs, supp_size, -1)
         embeddings_query = self.embedding_nn(X_query).view(bs, query_size, -1)
-        tg.guard(embeddings_supp, "*, SUPP_SIZE, NUM_FEATURES")
-        tg.guard(embeddings_query, "*, QUERY_SIZE, NUM_FEATURES")
+#         tg.guard(embeddings_supp, "*, SUPP_SIZE, NUM_FEATURES")
+#         tg.guard(embeddings_query, "*, QUERY_SIZE, NUM_FEATURES")
         y_supp_broadcast = y_supp.unsqueeze(-1).expand(bs, supp_size, embeddings_supp.shape[-1])
         centroids = torch.zeros(bs, num_classes, embeddings_supp.shape[-1], device=X_supp.device, dtype=embeddings_supp.dtype)\
                     .scatter_add(1, y_supp_broadcast, embeddings_supp) / supp_size * num_classes
-        tg.guard(centroids, "*, NUM_CLASSES, NUM_FEATURES")
+#         tg.guard(centroids, "*, NUM_CLASSES, NUM_FEATURES")
         result = dict(centroids=centroids,
                       embeddings_support=embeddings_supp,
                       embeddings_query=embeddings_query)
@@ -76,12 +76,12 @@ class PrototypicalNetwork(nn.Module):
         distance_matrix = (pred['embeddings_query'].unsqueeze(1) -
                            pred['centroids'].unsqueeze(2)) \
             .pow(2)  # [batch_size, num_classes, query_size, emb_features]
-        tg.guard(distance_matrix, "*, NUM_CLASSES, QUERY_SIZE, NUM_FEATURES")
+#         tg.guard(distance_matrix, "*, NUM_CLASSES, QUERY_SIZE, NUM_FEATURES")
         log_prob_unscaled = (- distance_matrix).sum(dim=-1)
         const_norm = log_prob_unscaled.logsumexp(dim=1, keepdim=True)
         log_prob = log_prob_unscaled - const_norm
         prob = log_prob.exp()
-        tg.guard(prob, "*, NUM_CLASSES, QUERY_SIZE")
+#         tg.guard(prob, "*, NUM_CLASSES, QUERY_SIZE")
         return prob
 
     def predict(self, X_supp, y_supp, X_query):

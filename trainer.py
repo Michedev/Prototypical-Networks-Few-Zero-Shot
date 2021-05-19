@@ -91,8 +91,8 @@ class Trainer:
         index_correct_class = index_correct_class\
             .expand(index_correct_class.shape[0], index_correct_class.shape[1], num_classes)
         index_correct_class = index_correct_class.int()
-        tg.guard(index_correct_class, "*, QUERY_SIZE, NUM_CLASSES")
-        tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
+#         tg.guard(index_correct_class, "*, QUERY_SIZE, NUM_CLASSES")
+#         tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
 
         loss_value = (loss_matrix * -1).logsumexp(dim=-1).sum()
         loss_value += (loss_matrix * index_correct_class).sum()
@@ -123,7 +123,7 @@ class Trainer:
             e.state.eval_results = eval_results
             e.fire_event("EVAL_DONE")
 
-        es = EarlyStopping(5, lambda e: - e.state.eval_results['val'].metrics['avg_loss'], trainer)
+        es = EarlyStopping(3, lambda e: - e.state.eval_results['val'].metrics['avg_loss'], trainer)
         trainer.add_event_handler("EVAL_DONE", es)
 
         return trainer

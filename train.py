@@ -28,16 +28,24 @@ def distance_f(name: str) -> torch.nn.Module:
 def dataset_f(args, meta_split: Literal['train', 'val', 'test'] = None):
     if meta_split is None:
         meta_split = 'train'
+    meta_train = meta_split == 'train'
+    meta_val = meta_split == 'val'
+    meta_test = meta_split == 'test'
     dataset = args.dataset
+    if dataset == 'miniimagenet' and meta_val and args.num_classes > 16:
+        args.num_classes = 16
+        print('set num classes of mini_imagenet val to 16 because is the maximum')
     dataset_kwargs = dict(folder=DATAFOLDER,
                           shots=args.support_samples,
                           ways=args.num_classes,
                           shuffle=True,
                           test_shots=args.query_samples,
                           seed=args.seed,
-                          meta_split=meta_split,
                           target_transform=Categorical(num_classes=args.num_classes),
-                          download=True
+                          download=True,
+                          meta_train=meta_train,
+                          meta_val=meta_val,
+                          meta_test=meta_test
                           )
     if dataset == 'omniglot':
         return omniglot(**dataset_kwargs, class_augmentations=[Rotation([90, 180, 270])], )
@@ -46,6 +54,7 @@ def dataset_f(args, meta_split: Literal['train', 'val', 'test'] = None):
     elif dataset.upper() == 'CUB':
         if args.support_samples == 0:
             from cub_dataset import CubDatasetEmbeddingsZeroShot
+            print('Instantiating CubDatasetEmbeddingsZeroShot')
             return CubDatasetEmbeddingsZeroShot(DATAFOLDER, meta_split, args.query_samples, args.num_classes)
         else:
             return cub(**dataset_kwargs)
