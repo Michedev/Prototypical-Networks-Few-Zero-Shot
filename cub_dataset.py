@@ -3,6 +3,7 @@ from path import Path
 from torch.utils.data import Dataset
 from typing import Union, Literal, List, Tuple
 from itertools import combinations
+import gc
 
 
 class CubDatasetEmbeddingsZeroShot(Dataset):
@@ -13,7 +14,8 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
     
     embedding_images = None
     
-    def __init__(self, root: Union[str, Path], split: Literal['train', 'val', 'test'],
+    def __init__(self, root: Union[str, Path],
+                 split: Literal['train', 'val', 'test'],
                  query_size: int, num_classes: int):
         assert split in ['train', 'val', 'test']
         if isinstance(root, str):
@@ -28,7 +30,9 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
         if self.embedding_images is None:
             self.embedding_images = dict()
             for f in self.folder_image_features.files():
-                self.embedding_images[f] = torch.load(f)
+                self.embedding_images[f] = torch.load(f).permute(0, 2, 1).float()
+                gc.collect()
+            print('loaded embedding_images cub')
         self.query_size = query_size
         self.class_combinations = list(combinations(self.class_list, num_classes))
         self.query_index = [(i, j) for i in range(60) for j in range(10)]
@@ -54,7 +58,7 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
             class_image_features = self.embedding_images[class_fname]
             for i_row, i_split in query_indexes:
                 label[counter] = i
-                img_features[counter, :] = class_image_features[i_row, :, i_split]
+                img_features[counter, :] = class_image_features[i_row, i_split, :]
                 counter += 1
         return dict(test=(img_features, label), meta=meta_features)
 
