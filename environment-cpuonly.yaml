@@ -43,6 +43,7 @@ dependencies:
   - olefile=0.46=pyh9f0ad1d_1
   - openh264=2.1.1=h780b84a_0
   - openssl=1.1.1k=h7f98852_0
+  - path=15.1.2=py38h06a4308_0
   - pillow=8.2.0=py38he98fc37_0
   - pip=21.1.1=pyhd8ed1ab_0
   - python=3.8.10=h49503c6_1_cpython

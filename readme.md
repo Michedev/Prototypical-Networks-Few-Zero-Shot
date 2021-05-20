@@ -15,8 +15,6 @@ If you don't have the command _conda_ install it  from
 
 - Run 600 episodes
 
-TODO: redo this table 
-
 
 | Dataset       | Train num classes | Train support samples | Train query samples | Test num classes | Test support samples | Test query samples | Test accuracy | Test loss |
 |---------------|-------------------|-----------------------|---------------------|------------------|----------------------|--------------------|---------------|-----------|
