@@ -27,10 +27,10 @@ class Trainer:
 
     opt: Optional[torch.optim.Optimizer]
     device: Union[str, torch.device]
-    use_lr_decay: bool
-    use_early_stop: bool
-    early_stop_delta: float
-    early_stop_patience: int
+    use_lr_decay: bool = False
+    use_early_stop: bool = True
+    early_stop_delta: float = 0.0
+    early_stop_patience: int = 2
     lr_decay_gamma: float = None
     lr_decay_steps: int = None
     eval_steps: Optional[int] = None

@@ -65,6 +65,7 @@ dependencies:
   - olefile=0.46=py_0
   - openh264=2.1.0=hd408876_0
   - openssl=1.1.1k=h27cfd23_0
+  - pandas=1.2.4=py38h2531618_0
   - path=15.1.2=py38h06a4308_0
   - pillow=8.2.0=py38he98fc37_0
   - pip=21.0.1=py38h06a4308_0
@@ -76,8 +77,10 @@ dependencies:
   - pyopenssl=20.0.1=pyhd3eb1b0_1
   - pysocks=1.7.1=py38h06a4308_0
   - python=3.8.8=hdb3f193_5
+  - python-dateutil=2.8.1=pyhd3eb1b0_0
   - python_abi=3.8=1_cp38
   - pytorch=1.8.1=py3.8_cuda10.2_cudnn7.6.5_0
+  - pytz=2021.1=pyhd3eb1b0_0
   - pyyaml=5.3.1=py38h8df0ef7_1
   - readline=8.1=h27cfd23_0
   - requests=2.25.1=pyhd3eb1b0_0
@@ -86,6 +89,7 @@ dependencies:
   - setuptools=52.0.0=py38h06a4308_0
   - six=1.15.0=py38h06a4308_0
   - sqlite=3.35.4=hdfb4753_0
+  - tabulate=0.8.9=py38h06a4308_0
   - tensorboard=2.4.0=pyhc547734_0
   - tensorboard-plugin-wit=1.6.0=py_0
   - tk=8.6.10=hbc83047_0

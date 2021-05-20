@@ -42,8 +42,7 @@ def load_best_model_checkpoint(run: Path, map_location=None):
     return model_parameters
 
 
-def main():
-    args = test_args()
+def main(args):
     test_dataset = dataset_f(args, 'test')
     test_dloader = BatchMetaDataLoader(test_dataset, args.batch_size)
     model_checkpoint = load_best_model_checkpoint(args.checkpoint, args.device)
@@ -60,7 +59,7 @@ def main():
     model = model.float().to(args.device)
 
     evaluator = Trainer(model, None, test_dloader, args.distance, args.checkpoint,
-                        -1, None, device=args.device, use_lr_decay=False,
+                        train_epochs=-1, opt=None, device=args.device,
                         eval_steps=args.steps, zero_shot=zero_shot)
     test_results = evaluator.eval()['val']
     print('evaluation done')
@@ -79,4 +78,5 @@ def main():
     print('saved results to', dst_file)
 
 if __name__ == '__main__':
-    main()
+    args = test_args()
+    main(args)

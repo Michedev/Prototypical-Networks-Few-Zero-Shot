@@ -1,6 +1,5 @@
 import argparse
 import json
-import subprocess
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import List
@@ -8,9 +7,14 @@ import pandas as pd
 import yaml
 from path import Path
 from paths import RUN, ROOT
+from test import main as test_main
+
 
 
 def clean_empty_runs():
+    """
+    Delete experiments under "run/" which doesn't have a checkpoint
+    """
     for run_folder in RUN.dirs():
         files_run: List[Path] = run_folder.files()
         if not any(x.basename().startswith('checkpoint') for x in files_run):
@@ -23,9 +27,21 @@ class RunParams:
     num_classes: int
     query_samples: int
     support_samples: int
+    checkpoint: Path
+    device: str
+    batch_size: int
+    dataset: str
+    distance: str
+    train_config: dict
+    steps: int = 600
 
 
 def run_evals(args):
+    """
+    Run evaluations on test set of all experiments using paper parameters.
+    Evaluation parameters are stored in "eval_dataset_runs.yaml".
+    Additional args are: --device and --batch-size
+    """
     with open(ROOT / 'eval_dataset_runs.yaml') as f:
         runs_per_dataset = yaml.load(f)
     for run in RUN.dirs():
@@ -36,17 +52,21 @@ def run_evals(args):
         print('dataset', dataset)
         runs_params: List[dict] = runs_per_dataset[dataset]
         for run_params in runs_params:
-            run_params = RunParams(**run_params)
+            run_params = RunParams(**run_params,
+                                   checkpoint=run,
+                                   device=args.device,
+                                   batch_size=args.batch_size,
+                                   steps=600, dataset=dataset,
+                                   distance=train_config['distance'],
+                                   train_config=train_config)
             print('run params:', run_params)
-            result_code = subprocess.call(['python', 'test.py', f'--num-classes={run_params.num_classes}',
-                                           f'--query-size={run_params.query_samples}',
-                                           f'--support-size={run_params.support_samples}',
-                                           f'--checkpoint={str(run)}', f'--device={args.device}',
-                                           f'--batch-size={args.batch_size}', '--steps=600'])
-            print('run output code:', result_code)
+            test_main(run_params)
 
 
 def make_table_eval():
+    """
+    Make table by gathering all experiment evaluation results
+    """
     table = defaultdict(list)
     for run in RUN.dirs():
         eval_folder = run / 'evaluation'
@@ -76,16 +96,19 @@ def make_table_eval():
                 table['Test loss'].append(eval_loss)
     table = pd.DataFrame(table)
     aggr_table = table.pivot_table(columns=table.columns.drop(['Test accuracy', 'Test loss']).tolist(),
-                                   aggfunc={'Test accuracy': 'max', 'Test loss':'min'})
+                                   aggfunc={'Test accuracy': 'max', 'Test loss': 'min'})
     print(aggr_table.T.to_markdown())
     print(aggr_table.T)
     aggr_table.T.to_csv('eval_results.csv')
 
 
 cmds = {
-    'clean_empty_runs': clean_empty_runs,
-    'make_table_eval': make_table_eval,
-    'run_evals': [run_evals, '--device', '--batch-size']
+    'clean_empty_runs': [clean_empty_runs],
+    'make_table_eval': [make_table_eval],
+    'run_evals': [run_evals,
+                  [['--device'], dict(type=str, required=True, dest='device')],
+                  [['--batch-size'], dict(type=int, required=True, dest='batch_size')]
+    ]
 }
 
 if __name__ == '__main__':
@@ -93,15 +116,17 @@ if __name__ == '__main__':
     subparsers = argument_parser.add_subparsers(title='cmd', dest='cmd')
     for cmd in cmds:
         values = cmds[cmd]
-        subparser = subparsers.add_parser(cmd)
-        if isinstance(values, list):
-            for i in range(1, len(values)):
-                subparser.add_argument(values[i])
+        func = values[0]
+        subparser = subparsers.add_parser(cmd, help=func.__doc__)
+        for i in range(1, len(values)):
+            names = values[i][0]
+            arg_kwargs = values[i][1]
+            subparser.add_argument(*names, **arg_kwargs)
 
     args = argument_parser.parse_args()
-    function_cmd = cmds[args.cmd]
-    if isinstance(function_cmd, list):
-        function_cmd = function_cmd[0]
-        function_cmd(args)
+    cmd_args = cmds[args.cmd]
+    funct = cmd_args[0]
+    if len(cmd_args) > 1:
+        funct(args)
     else:
-        function_cmd()
+        funct()
