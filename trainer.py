@@ -170,7 +170,7 @@ class Trainer:
         self.model.train()
         if self.train_dloader is not None:
             print('Train accuracy:', results_train.metrics['accuracy'])
-        print('Validation accuracy:', results_val.metrics['accuracy'])
+        print('Test accuracy:', results_val.metrics['accuracy'])
         return result
 
     def setup_evaluator(self):
