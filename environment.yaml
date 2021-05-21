@@ -111,4 +111,3 @@ dependencies:
     - tensorguard==0.1.2
     - torchmeta==1.7.0
     - tqdm==4.60.0
-prefix: /home/mikedev/Programming/venv/DataScience/envs/prototypical-networks

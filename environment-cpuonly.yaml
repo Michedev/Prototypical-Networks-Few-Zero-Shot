@@ -70,4 +70,3 @@ dependencies:
     - torchmeta==1.7.0
     - tqdm==4.60.0
     - urllib3==1.26.4
-prefix: /opt/venvs/DataScience/envs/prototypical-networks
