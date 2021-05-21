@@ -112,7 +112,7 @@ class PrototypicalNetworkZeroShot(nn.Module):
 
     def forward(self, meta_classes, X_query):
         centroids = self.linear_meta(meta_classes)
-        centroids = centroids / centroids.norm(2, dim=-1, keepdim=True)
+        centroids = centroids / centroids.norm(1, dim=-1, keepdim=True)
         embeddings_query = self.linear_img(X_query)
         result = dict(centroids=centroids,
                     embeddings_query=embeddings_query)
