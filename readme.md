@@ -31,7 +31,7 @@ If you don't have the command _conda_ install it  from
 | Omniglot      | 60                | 5                     | 5                   | 20               | 1                    | 1                  | 93.55%        | 5.15      |
 | Omniglot      | 60                | 5                     | 5                   | 20               | 5                    | 5                  | 98.84%        | 0.79      |
 
-##CUB Dataset
+## CUB Dataset
 
 To reproduce the results of Zero Shot CUB dataset download the preprocessed dataset
 at this [link](https://mega.nz/file/iDpXCCaL#j5AI-LKKJqgygjIsWtBN1Ow_-yDs1f36Ki8PHtesgB0).
@@ -100,32 +100,16 @@ The script supports many arguments which are:
 
 You can also test by yourself running `python3 test.py`. It supports also many arguments which are
 
-    NAME
-        test.py - Evaluate model performance into test split and get printed loss and accuracy
+    usage: test.py [-h] --run-path RUN_PATH [--support-size SUPPORT_SAMPLES] [--query-size QUERY_SAMPLES] [--num-classes NUM_CLASSES] [--batch-size BATCH_SIZE] [--seed SEED] [--steps STEPS] [--device DEVICE]
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      --run-path RUN_PATH, -r RUN_PATH
+      --support-size SUPPORT_SAMPLES, -s SUPPORT_SAMPLES
+      --query-size QUERY_SAMPLES, -q QUERY_SAMPLES
+      --num-classes NUM_CLASSES, --nc NUM_CLASSES
+      --batch-size BATCH_SIZE, -b BATCH_SIZE
+      --seed SEED
+      --steps STEPS
+     
 
-    SYNOPSIS
-        test.py DATASET N N_S N_Q TESTSIZE <flags>
-    
-    DESCRIPTION
-        Evaluate model performance into test split and get printed loss and accuracy
-    
-    POSITIONAL ARGUMENTS
-        DATASET
-            train dataset; can be 'omniglot' or 'miniimagenet' [str] (Note: actually works only with 'miniimagenet')
-        N
-            num classes for each meta task [int]
-        N_S
-            size of support set for each task (see paper for more details) [int]
-        N_Q
-            size of query set for each task (see paper for more details) [int]
-        TESTSIZE
-            num of episodes of test split
-    
-    FLAGS
-        --use_best=USE_BEST
-            instead of loading last epoch model parameters load the one with the lowest validation loss [bool] [default False]
-        --device=DEVICE
-            Location of data and model parameters storage [string] [default 'cpu']
-    
-    NOTES
-        You can also use flags syntax for POSITIONAL ARGUMENTS
