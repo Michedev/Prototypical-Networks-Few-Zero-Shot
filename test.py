@@ -9,6 +9,7 @@ import re
 from torchmeta.utils.data import BatchMetaDataLoader
 from model import PrototypicalNetwork, PrototypicalNetworkZeroShot
 from train import dataset_f, distance_f
+from torch.utils.data import DataLoader
 from trainer import Trainer
 
 
@@ -44,14 +45,17 @@ def load_best_model_checkpoint(run: Path, map_location=None):
 
 def main(args):
     test_dataset = dataset_f(args, 'test')
-    test_dloader = BatchMetaDataLoader(test_dataset, args.batch_size)
+    if args.support_samples > 0:
+        test_dloader = BatchMetaDataLoader(test_dataset, args.batch_size)
+    else:
+        test_dloader = DataLoader(test_dataset, args.batch_size)
     model_checkpoint = load_best_model_checkpoint(args.checkpoint, args.device)
 
     zero_shot = args.support_samples == 0
     if zero_shot:
-        model = PrototypicalNetworkZeroShot(num_classes=args.num_classes,
-                                            meta_features=args.train_config.meta_features,
-                                            img_features=args.train_config.img_features)
+        model = PrototypicalNetworkZeroShot(args.distance, num_classes=args.num_classes,
+                                            meta_features=args.train_config['metadata_features'],
+                                            img_features=args.train_config['image_features'])
     else:
         input_channels = 1 if args.dataset == 'omniglot' else 3
         model = PrototypicalNetwork(args.num_classes, input_channels=input_channels)

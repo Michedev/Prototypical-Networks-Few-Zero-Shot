@@ -89,6 +89,7 @@ class Trainer:
         embeddings_query = embeddings_query.unsqueeze(2)
         loss_matrix = self.distance_fun(centroids, embeddings_query).sum(
             dim=-1)  # [batch_size, query_size, num_classes]
+        tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
         index_correct_class = torch.arange(num_classes, device=y_query.device).view(1, 1, num_classes)
         index_correct_class = y_query.unsqueeze(-1) == index_correct_class
         index_correct_class = index_correct_class\
@@ -135,7 +136,7 @@ class Trainer:
 
     def train(self):
         trainer = self.setup_training()
-
+        print('starting training...')
         trainer.run(self.train_dloader, self.train_epochs, self.epoch_steps)
 
     def eval(self):
@@ -182,7 +183,7 @@ class Trainer:
             :return: tuple (y_pred, y) both with shape [batch_size * query_size, num_classes] in OHE
             """
             y_pred, y = o['prob_query'].argmax(1).flatten(), o['batch']['test'][1].flatten()
-            num_classes = y.max()+1
+            num_classes = int(y.max().item())+1
             y_pred = one_hot(y_pred, num_classes)
             y = one_hot(y, num_classes)
             assert y_pred.shape == y.shape, f"{y_pred.shape} != {y.shape}"

@@ -9,10 +9,12 @@ from path import Path
 from torchmeta.datasets.helpers import omniglot, miniimagenet, cub
 from torchmeta.utils.data import BatchMetaDataLoader
 from torchmeta.transforms import Categorical, Rotation
+from cub_dataset import CubDatasetEmbeddingsZeroShot
 
 from model import PrototypicalNetwork, PrototypicalNetworkZeroShot
 from paths import new_experiment_path, DATAFOLDER
 from trainer import Trainer
+from torch.utils.data import DataLoader
 from utils import set_all_seeds
 
 
@@ -127,14 +129,14 @@ def parse_args() -> Arguments:
                                 'i.e. when --support-samples=0', dest='image_features')
     argparser.add_argument('--lr', default=1e-4, type=float, help='lr for optimizer(adam)', dest='lr')
     argparser.add_argument('--weight-decay', default=0.0, type=float, dest='weight_decay')
-    argparser.add_argument('--lr-decay', default=True, type=bool, dest='use_lr_decay',
+    argparser.add_argument('--lr-decay', default=True, type=eval, choices=[True, False], dest='use_lr_decay',
                            help='Set true to use multiplicative lr decay '
                                 '(set also --lr-decay-gamma and --lr-decay-steps)')
     argparser.add_argument('--lr-decay-gamma', default=None, type=float, dest='lr_decay_gamma',
                            help='Multiplicative factor to apply to lr decay')
     argparser.add_argument('--lr-decay-steps', default=None, type=int, dest='lr_decay_steps',
                            help='Number of steps to apply lr decay')
-    argparser.add_argument('--early-stop', default=True, type=bool, dest='use_early_stop',
+    argparser.add_argument('--early-stop', default=True, type=eval, choices=[True, False], dest='use_early_stop',
                            help='Enable early stop based on validation loss')
     argparser.add_argument('--early-stop-patience', '--es-patience', dest='early_stop_patience',
                            default=3, type=int)
@@ -184,14 +186,21 @@ def main():
     args.device = torch.device(args.device)
     train_dataset = dataset_f(args, 'train')
     val_dataset = dataset_f(args, 'val')
-    train_dloader = BatchMetaDataLoader(train_dataset, args.batch_size, shuffle=True)
-    val_dloader = BatchMetaDataLoader(val_dataset, args.batch_size, shuffle=True)
+    print('instantiated datasets')
+    if isinstance(train_dataset, CubDatasetEmbeddingsZeroShot):
+        train_dloader = DataLoader(train_dataset, args.batch_size, shuffle=True)
+        val_dloader = DataLoader(val_dataset, args.batch_size, shuffle=True)
+    else:
+        train_dloader = BatchMetaDataLoader(train_dataset, args.batch_size, shuffle=True)
+        val_dloader = BatchMetaDataLoader(val_dataset, args.batch_size, shuffle=True)
+    print('instantiated data loader')
     zero_shot = args.support_samples == 0
     if zero_shot:
-        model = PrototypicalNetworkZeroShot(args.num_classes, False, args.metadata_features, args.image_features)
+        model = PrototypicalNetworkZeroShot(args.distance, args.num_classes, False, args.metadata_features, args.image_features)
     else:
         input_channels = 1 if args.dataset == 'omniglot' else 3
-        model = PrototypicalNetwork(args.num_classes, input_channels=input_channels)
+        model = PrototypicalNetwork(args.distance, args.num_classes, input_channels=input_channels)
+    print('model instatiated.')
     opt = torch.optim.Adam(model.parameters(), args.lr, weight_decay=args.weight_decay)
     trainer = Trainer(model=model, train_dloader=train_dloader,
                       val_dloader=val_dloader,

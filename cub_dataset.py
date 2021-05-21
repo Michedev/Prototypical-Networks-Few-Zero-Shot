@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 from typing import Union, Literal, List, Tuple
 from itertools import combinations
 import gc
+import numpy as np
 
 
 class CubDatasetEmbeddingsZeroShot(Dataset):
@@ -30,33 +31,39 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
         if self.embedding_images is None:
             self.embedding_images = dict()
             for f in self.folder_image_features.files():
-                self.embedding_images[f] = torch.load(f).permute(0, 2, 1).float()
+                self.embedding_images[str(f.basename()).replace('.pt', '')] = torch.load(f).permute(0, 2, 1).float()
                 gc.collect()
             print('loaded embedding_images cub')
         self.query_size = query_size
-        self.class_combinations = list(combinations(self.class_list, num_classes))
+#         self.class_combinations_idx = np.array(combinations(range(len(self.class_list)), num_classes))
         self.query_index = [(i, j) for i in range(60) for j in range(10)]
         if split == 'test':
             self.query_index = [(i, 0) for i in range(60)]
-        self.query_combinations = list(combinations(self.query_index, query_size))
+#         self.query_combinations_idx = np.array(combinations(range(len(self.query_index)), query_size))
         self.label_map = {c: i for i, c in enumerate(self.class_list)}
         self.label_global_index = {c: int(c[:3])-1 for c in self.class_list}
+        print('finish init cub zero shot dataset')
 
     def __len__(self):
-        return len(self.class_combinations) * len(self.class_combinations)
+        return len(self.class_list) * len(self.query_index)
 
     def __getitem__(self, i: int) -> dict:
-        query_classes: Tuple[str] = self.class_combinations[i % len(self.class_combinations)]
+        query_classes_idx: np.array = np.random.choice(len(self.class_list), self.num_classes, replace=False)
+        query_classes: List[str] = [self.class_list[idx] for idx in query_classes_idx]
         img_features = torch.zeros(self.query_size * self.num_classes, 1024)
         meta_features = torch.zeros(self.num_classes, 312)
-        label = torch.zeros(self.query_size * self.num_classes)
-        query_indexes: tuple = self.query_combinations[i % len(self.query_combinations)]
+        label = torch.zeros(self.query_size * self.num_classes, dtype=torch.long)
+#         query_indexes: np.array = np.random.choice(len(self.query_index), self.query_size, replace=False)
+#         query_indexes = [self.query_index[i] for i in query_indexes]
         counter = 0
         for i, class_fname in enumerate(query_classes):
             class_global_index = self.label_global_index[class_fname]
             meta_features[i] = self.label_attributes[class_global_index]
             class_image_features = self.embedding_images[class_fname]
-            for i_row, i_split in query_indexes:
+            query_img_index = np.random.choice(class_image_features.shape[0], self.query_size)
+            query_split_index = np.random.choice(class_image_features.shape[1], self.query_size)
+            for j in range(self.query_size):
+                i_row, i_split = query_img_index[j], query_split_index[j]
                 label[counter] = i
                 img_features[counter, :] = class_image_features[i_row, i_split, :]
                 counter += 1

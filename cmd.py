@@ -8,7 +8,7 @@ import yaml
 from path import Path
 from paths import RUN, ROOT
 from test import main as test_main
-
+from train import distance_f
 
 
 def clean_empty_runs():
@@ -33,6 +33,7 @@ class RunParams:
     dataset: str
     distance: str
     train_config: dict
+    seed: int = 13
     steps: int = 600
 
 
@@ -45,6 +46,12 @@ def run_evals(args):
     with open(ROOT / 'eval_dataset_runs.yaml') as f:
         runs_per_dataset = yaml.load(f)
     for run in RUN.dirs():
+        if not run.basename().startswith('8'):
+            print('skip', run)
+            continue
+        if not any(f.basename().startswith('checkpoint') for f in run.files()):
+            print('skip', run)
+            continue
         with open(run / 'config.yaml') as f:
             train_config = yaml.safe_load(f)
         dataset: str = train_config['dataset']
@@ -57,7 +64,7 @@ def run_evals(args):
                                    device=args.device,
                                    batch_size=args.batch_size,
                                    steps=600, dataset=dataset,
-                                   distance=train_config['distance'],
+                                   distance=distance_f(train_config['distance']),
                                    train_config=train_config)
             print('run params:', run_params)
             test_main(run_params)

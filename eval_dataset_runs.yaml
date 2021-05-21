@@ -20,3 +20,7 @@ omniglot:
   - num_classes: 20
     query_samples: 5
     support_samples: 5
+cub:
+    - num_classes: 50
+      support_samples: 0
+      query_samples: 10
