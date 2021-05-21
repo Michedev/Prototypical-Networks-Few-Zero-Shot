@@ -71,12 +71,12 @@ Project structure is very straightforward and flatten to maintain simplicity.
 If you want to train by yourself the model you can train directly by running `python3 train.py`.
 The script supports many arguments which are:
     
-    usage: train.py [-h] --dataset {omniglot,miniimagenet} --classes NUM_CLASSES --support-samples SUPPORT_SAMPLES [--query-samples QUERY_SAMPLES] [--distance {euclidean,cosine}] [--epochs EPOCHS]
+    usage: train.py [-h] --dataset {omniglot,miniimagenet,cub} --classes NUM_CLASSES --support-samples SUPPORT_SAMPLES [--query-samples QUERY_SAMPLES] [--distance {euclidean,cosine}] [--epochs EPOCHS]
                     [--epoch-steps EPOCH_STEPS] [--seed SEED] [--device DEVICE] [--batch-size BATCH_SIZE] [--eval-steps EVAL_STEPS] [--run-path RUN_PATH]
     
     optional arguments:
       -h, --help            show this help message and exit
-      --dataset {omniglot,miniimagenet}, -d {omniglot,miniimagenet}
+      --dataset {omniglot,miniimagenet,cub}, -d {omniglot,miniimagenet,cub}
                             Specify train dataset
       --classes NUM_CLASSES, --num-classes NUM_CLASSES, -c NUM_CLASSES
                             Number of classes for each task in meta learning i.e. the N in N-way with K shots
