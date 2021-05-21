@@ -1,13 +1,12 @@
 import argparse
 import json
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import List
 import pandas as pd
 import yaml
 from path import Path
 from paths import RUN, ROOT
-from test import main as test_main
+from test import main as test_main, TestParams
 from train import distance_f
 
 
@@ -20,21 +19,6 @@ def clean_empty_runs():
         if not any(x.basename().startswith('checkpoint') for x in files_run):
             print('to delete', repr(run_folder))
             run_folder.rmtree()
-
-
-@dataclass
-class RunParams:
-    num_classes: int
-    query_samples: int
-    support_samples: int
-    checkpoint: Path
-    device: str
-    batch_size: int
-    dataset: str
-    distance: str
-    train_config: dict
-    seed: int = 13
-    steps: int = 600
 
 
 def run_evals(args):
@@ -59,13 +43,13 @@ def run_evals(args):
         print('dataset', dataset)
         runs_params: List[dict] = runs_per_dataset[dataset]
         for run_params in runs_params:
-            run_params = RunParams(**run_params,
-                                   checkpoint=run,
-                                   device=args.device,
-                                   batch_size=args.batch_size,
-                                   steps=600, dataset=dataset,
-                                   distance=distance_f(train_config['distance']),
-                                   train_config=train_config)
+            run_params = TestParams(**run_params,
+                                    run_path=run,
+                                    device=args.device,
+                                    batch_size=args.batch_size,
+                                    steps=600, dataset=dataset,
+                                    distance=distance_f(train_config['distance']),
+                                    train_config=train_config)
             print('run params:', run_params)
             test_main(run_params)
 
