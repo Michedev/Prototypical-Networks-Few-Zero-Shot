@@ -4,6 +4,7 @@ from typing import Literal, Callable, Optional
 
 from dataclasses import dataclass, field
 import torch
+import tensorguard as tg
 import yaml
 from path import Path
 from torchmeta.datasets.helpers import omniglot, miniimagenet, cub
@@ -52,6 +53,7 @@ def dataset_f(args, meta_split: Literal['train', 'val', 'test'] = None):
     if dataset == 'omniglot':
         return omniglot(**dataset_kwargs, class_augmentations=[Rotation([90, 180, 270])], )
     elif dataset == 'miniimagenet':
+        tg.set_dim('NUM_FEATURES', 1600)
         return miniimagenet(**dataset_kwargs)
     elif dataset.upper() == 'CUB':
         if args.support_samples == 0:

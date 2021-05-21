@@ -74,7 +74,7 @@ class Trainer:
         pred_output['loss'] = loss
         pred_output['batch'] = batch
         return pred_output
-
+    
     def calc_loss(self, centroids, embeddings_query, y_query):
         """
         Calculate loss as specified in "Prototypical Networks for Few-shot Learning" page 3 algorithm 1
@@ -162,9 +162,12 @@ class Trainer:
                 end = timeit.default_timer()
                 results_train.eval_duration_seconds = end - start
                 result['train'] = results_train
+            tg.del_dim('SUPP_SIZE')
+            tg.del_dim('QUERY_SIZE')
             start = timeit.default_timer()
             results_val = validator.run(self.val_dloader, max_epochs=1, epoch_length=self.eval_steps)
             end = timeit.default_timer()
+            tg.del_dim('QUERY_SIZE')
             results_val.eval_duration_seconds = end - start
             result['val'] = results_val
         self.model.train()

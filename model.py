@@ -7,7 +7,7 @@ def EmbeddingBlock(input_channels):
         nn.Conv2d(input_channels, 64, kernel_size=3, padding=1),
         nn.BatchNorm2d(64),
         nn.ReLU(),
-        nn.MaxPool2d(2, ceil_mode=True)
+        nn.MaxPool2d(2, ceil_mode=False)
     )
 
 
@@ -17,6 +17,7 @@ def embedding_module(input_channels=3):
         EmbeddingBlock(64),
         EmbeddingBlock(64),
         EmbeddingBlock(64),
+        
         nn.Flatten(start_dim=1)
     )
 
@@ -33,16 +34,16 @@ class PrototypicalNetwork(nn.Module):
     def forward(self, X_supp, y_supp, X_query):
         num_classes = y_supp.max() + 1
         bs, supp_size, c, h, w = X_supp.shape
-#         tg.guard(X_supp, "*, SUPP_SIZE, C, H, W")
-#         tg.guard(y_supp, "*, SUPP_SIZE")
-#         tg.guard(X_query, "*, QUERY_SIZE, C, H, W")
+        tg.guard(X_supp, "*, SUPP_SIZE, C, H, W")
+        tg.guard(y_supp, "*, SUPP_SIZE")
+        tg.guard(X_query, "*, QUERY_SIZE, C, H, W")
         query_size = X_query.shape[1]
         X_supp = X_supp.flatten(0, 1).contiguous()
         X_query = X_query.flatten(0, 1).contiguous()
         embeddings_supp = self.embedding_nn(X_supp).view(bs, supp_size, -1)
         embeddings_query = self.embedding_nn(X_query).view(bs, query_size, -1)
-#         tg.guard(embeddings_supp, "*, SUPP_SIZE, NUM_FEATURES")
-#         tg.guard(embeddings_query, "*, QUERY_SIZE, NUM_FEATURES")
+        tg.guard(embeddings_supp, "*, SUPP_SIZE, NUM_FEATURES")
+        tg.guard(embeddings_query, "*, QUERY_SIZE, NUM_FEATURES")
         y_supp_broadcast = y_supp.unsqueeze(-1).expand(bs, supp_size, embeddings_supp.shape[-1])
         centroids = torch.zeros(bs, num_classes, embeddings_supp.shape[-1], device=X_supp.device, dtype=embeddings_supp.dtype)\
                     .scatter_add(1, y_supp_broadcast, embeddings_supp) / supp_size * num_classes
