@@ -1,7 +1,8 @@
 name: prototypical-networks
 channels:
-  - conda-forge
   - pytorch
+  - nvidia
+  - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -21,7 +22,7 @@ dependencies:
   - click=8.0.0=pyhd3eb1b0_0
   - coverage=5.5=py38h27cfd23_2
   - cryptography=3.4.7=py38hd23ed53_0
-  - cudatoolkit=10.2.89=hfd86e86_1
+  - cudatoolkit=11.1.74=h6bb024c_0
   - cython=0.29.23=py38h2531618_0
   - ffmpeg=4.3=hf484d3e_0
   - freetype=2.10.4=h5ab3b9f_0
@@ -79,7 +80,7 @@ dependencies:
   - python=3.8.8=hdb3f193_5
   - python-dateutil=2.8.1=pyhd3eb1b0_0
   - python_abi=3.8=1_cp38
-  - pytorch=1.8.1=py3.8_cuda10.2_cudnn7.6.5_0
+  - pytorch=1.8.1=py3.8_cuda11.1_cudnn8.0.5_0
   - pytz=2021.1=pyhd3eb1b0_0
   - pyyaml=5.3.1=py38h8df0ef7_1
   - readline=8.1=h27cfd23_0
@@ -93,7 +94,7 @@ dependencies:
   - tensorboard=2.4.0=pyhc547734_0
   - tensorboard-plugin-wit=1.6.0=py_0
   - tk=8.6.10=hbc83047_0
-  - torchvision=0.9.1=py38_cu102
+  - torchvision=0.9.1=py38_cu111
   - typing_extensions=3.7.4.3=pyha847dfd_0
   - urllib3=1.26.4=pyhd3eb1b0_0
   - werkzeug=1.0.1=pyhd3eb1b0_0
@@ -111,3 +112,4 @@ dependencies:
     - tensorguard==0.1.2
     - torchmeta==1.7.0
     - tqdm==4.60.0
+prefix: /opt/conda/envs/prototypical-networks
