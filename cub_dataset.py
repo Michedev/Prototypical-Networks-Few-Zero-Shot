@@ -41,7 +41,7 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
             self.query_index = [(i, 0) for i in range(60)]
 #         self.query_combinations_idx = np.array(combinations(range(len(self.query_index)), query_size))
         self.label_map = {c: i for i, c in enumerate(self.class_list)}
-        self.label_global_index = {c: int(c[:3])-1 for c in self.class_list}
+        self.label_global_idx_map = {c: int(c[:3]) - 1 for c in self.class_list}
         print('finish init cub zero shot dataset')
 
     def __len__(self):
@@ -57,11 +57,14 @@ class CubDatasetEmbeddingsZeroShot(Dataset):
 #         query_indexes = [self.query_index[i] for i in query_indexes]
         counter = 0
         for i, class_fname in enumerate(query_classes):
-            class_global_index = self.label_global_index[class_fname]
+            class_global_index = self.label_global_idx_map[class_fname]
             meta_features[i] = self.label_attributes[class_global_index]
             class_image_features = self.embedding_images[class_fname]
             query_img_index = np.random.choice(class_image_features.shape[0], self.query_size)
-            query_split_index = np.random.choice(class_image_features.shape[1], self.query_size)
+            if self.split == 'test':
+                query_split_index = np.zeros((self.query_size,), dtype=np.long)
+            else:
+                query_split_index = np.random.choice(class_image_features.shape[1], self.query_size)
             for j in range(self.query_size):
                 i_row, i_split = query_img_index[j], query_split_index[j]
                 label[counter] = i
