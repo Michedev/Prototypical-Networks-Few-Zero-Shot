@@ -101,7 +101,7 @@ class PrototypicalNetwork(nn.Module):
 class PrototypicalNetworkZeroShot(nn.Module):
 
     def __init__(self, distance_function, num_classes: int = None, get_probabilities: bool = False,
-                 meta_features: int = 312, img_features: int = 1024):
+                 meta_features: int = 312, img_features: int = 1024, eps: float = 1e-6):
         super().__init__()
         self.distance_function = distance_function
         self.meta_features = meta_features
@@ -110,10 +110,11 @@ class PrototypicalNetworkZeroShot(nn.Module):
         self.num_classes = num_classes
         self.linear_img = nn.Linear(img_features, img_features)
         self.linear_meta = nn.Linear(meta_features, img_features)
+        self.eps = eps
 
     def forward(self, meta_classes, X_query):
         centroids = self.linear_meta(meta_classes)
-        centroids = centroids / centroids.norm(2, dim=-1, keepdim=True)
+        centroids = centroids / (centroids.norm(2, dim=-1, keepdim=True) + self.eps)
         embeddings_query = self.linear_img(X_query)
         result = dict(centroids=centroids,
                     embeddings_query=embeddings_query)
