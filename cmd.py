@@ -30,9 +30,6 @@ def run_evals(args):
     with open(ROOT / 'eval_dataset_runs.yaml') as f:
         runs_per_dataset = yaml.load(f)
     for run in RUN.dirs():
-        if not run.basename().startswith('8'):
-            print('skip', run)
-            continue
         if not any(f.basename().startswith('checkpoint') for f in run.files()):
             print('skip', run)
             continue
