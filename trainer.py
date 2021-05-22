@@ -162,12 +162,11 @@ class Trainer:
                 end = timeit.default_timer()
                 results_train.eval_duration_seconds = end - start
                 result['train'] = results_train
-            tg.del_dim('SUPP_SIZE')
-            tg.del_dim('QUERY_SIZE')
+            tg.reset()
             start = timeit.default_timer()
             results_val = validator.run(self.val_dloader, max_epochs=1, epoch_length=self.eval_steps)
             end = timeit.default_timer()
-            tg.del_dim('QUERY_SIZE')
+            tg.reset()
             results_val.eval_duration_seconds = end - start
             result['val'] = results_val
         self.model.train()
