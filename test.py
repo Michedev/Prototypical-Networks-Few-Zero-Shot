@@ -74,7 +74,7 @@ def main(args):
                                             img_features=args.train_config['image_features'])
     else:
         input_channels = 1 if args.dataset == 'omniglot' else 3
-        model = PrototypicalNetwork(args.num_classes, input_channels=input_channels)
+        model = PrototypicalNetwork(args.distance, args.num_classes, input_channels=input_channels)
     model.load_state_dict(model_checkpoint)
     model = model.float().to(args.device)
 
