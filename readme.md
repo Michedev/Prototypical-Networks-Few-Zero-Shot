@@ -16,27 +16,28 @@ If you don't have the command _conda_ install it  from
 - Run 600 episodes
 
 
-| Dataset       | Train num classes | Train support samples | Train query samples | Test num classes | Test support samples | Test query samples | Test accuracy | Test loss |
-|---------------|-------------------|-----------------------|---------------------|------------------|----------------------|--------------------|---------------|-----------|
-| Mini Imagenet | 20                | 5                     | 15                  | 5                | 1                    | 1                  | 41.36%        | 41.76     |
-| Mini Imagenet | 20                | 5                     | 15                  | 5                | 5                    | 5                  | 64.92%        | 14.64     |
-| Mini Imagenet | 30                | 1                     | 15                  | 5                | 1                    | 1                  | 45.02%        | 21.26     |
-| Mini Imagenet | 30                | 1                     | 15                  | 5                | 5                    | 5                  | 60.55%        | 17.75     |
-| Omniglot      | 60                | 1                     | 5                   | 5                | 1                    | 1                  | 98.73%        | 0.81      |
-| Omniglot      | 60                | 1                     | 5                   | 5                | 5                    | 5                  | 99.67%        | 0.22      |
-| Omniglot      | 60                | 1                     | 5                   | 20               | 1                    | 1                  | 95.74%        | 2.65      |
-| Omniglot      | 60                | 1                     | 5                   | 20               | 5                    | 5                  | 99.01%        | 0.61      |
-| Omniglot      | 60                | 5                     | 5                   | 5                | 1                    | 1                  | 97.79%        | 1.77      |
-| Omniglot      | 60                | 5                     | 5                   | 5                | 5                    | 5                  | 99.65%        | 0.28      |
-| Omniglot      | 60                | 5                     | 5                   | 20               | 1                    | 1                  | 93.55%        | 5.15      |
-| Omniglot      | 60                | 5                     | 5                   | 20               | 5                    | 5                  | 98.84%        | 0.79      |
+| Dataset       | Train num classes | Train support samples | Train query samples | Test num classes | Test support samples | Test query samples | Test accuracy | Paper Accuracy | Test loss |
+|---------------|-------------------|-----------------------|---------------------|------------------|----------------------|--------------------|---------------|-----------|-----------|
+| Mini Imagenet | 20                | 5                     | 15                  | 5                | 1                    | 1                  | 41.36%        | 49.42%    | 41.76     |
+| Mini Imagenet | 20                | 5                     | 15                  | 5                | 5                    | 5                  | 64.92%        | 68.20%    | 14.64     |
+| Mini Imagenet | 30                | 1                     | 15                  | 5                | 1                    | 1                  | 45.02%        | 49.42%    | 21.26     |
+| Mini Imagenet | 30                | 1                     | 15                  | 5                | 5                    | 5                  | 60.55%        |   68.20%  | 17.75     |
+| Omniglot      | 60                | 1                     | 5                   | 5                | 1                    | 1                  | 98.73%        | 98.8%     | 0.81      |
+| Omniglot      | 60                | 1                     | 5                   | 5                | 5                    | 5                  | 99.67%        |  99.7%    | 0.22      |
+| Omniglot      | 60                | 1                     | 5                   | 20               | 1                    | 1                  | 95.74%        | 96.0%     | 2.65      |
+| Omniglot      | 60                | 1                     | 5                   | 20               | 5                    | 5                  | 99.01%        |  98.9%    | 0.61      |
+| Omniglot      | 60                | 5                     | 5                   | 5                | 1                    | 1                  | 97.79%        |  98.8%    | 1.77      |
+| Omniglot      | 60                | 5                     | 5                   | 5                | 5                    | 5                  | 99.65%        | 99.7%     | 0.28      |
+| Omniglot      | 60                | 5                     | 5                   | 20               | 1                    | 1                  | 93.55%        |   96.0%   | 5.15      |
+| Omniglot      | 60                | 5                     | 5                   | 20               | 5                    | 5                  | 98.84%        |   98.9%   | 0.79      |
 
-## CUB Dataset
+
+### CUB Dataset
 
 To reproduce the results of Zero Shot CUB dataset download the preprocessed dataset
 at this [link](https://mega.nz/file/iDpXCCaL#j5AI-LKKJqgygjIsWtBN1Ow_-yDs1f36Ki8PHtesgB0).
 
-It contains GoogleLeNet visual features of CUB images and class features 
+The archive contains GoogleLeNet visual features of CUB images and class features 
 used as metadata features.
 
 
