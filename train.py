@@ -217,7 +217,8 @@ def main():
                       epoch_steps=args.epoch_steps,
                       zero_shot=zero_shot, use_early_stop=args.use_early_stop,
                       early_stop_delta=args.early_stop_delta,
-                      early_stop_patience=args.early_stop_patience)
+                      early_stop_patience=args.early_stop_patience,
+                      batch_size=args.batch_size)
     trainer.train()
 
 

@@ -40,8 +40,11 @@ class PrototypicalNetwork(nn.Module):
         query_size = X_query.shape[1]
         X_supp = X_supp.flatten(0, 1).contiguous()
         X_query = X_query.flatten(0, 1).contiguous()
-        embeddings_supp = self.embedding_nn(X_supp).view(bs, supp_size, -1)
-        embeddings_query = self.embedding_nn(X_query).view(bs, query_size, -1)
+        len_supp = len(X_supp)
+        X_supp_query = torch.cat([X_supp, X_query], dim=0)
+        embeddings_supp_query = self.embedding_nn(X_supp_query)
+        embeddings_supp = embeddings_supp_query[:len_supp].view(bs, supp_size, -1)
+        embeddings_query = embeddings_supp_query[len_supp:].view(bs, query_size, -1)
         tg.guard(embeddings_supp, "*, SUPP_SIZE, NUM_FEATURES")
         tg.guard(embeddings_query, "*, QUERY_SIZE, NUM_FEATURES")
         y_supp_broadcast = y_supp.unsqueeze(-1).expand(bs, supp_size, embeddings_supp.shape[-1])

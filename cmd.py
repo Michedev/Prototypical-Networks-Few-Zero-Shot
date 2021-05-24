@@ -57,9 +57,10 @@ def make_table_eval():
     """
     table = defaultdict(list)
     for run in RUN.dirs():
+        print('load', str(run))
         eval_folder = run / 'evaluation'
         with open(run / 'config.yaml') as f:
-            train_config = yaml.load(f)
+            train_config = yaml.safe_load(f)
         train_dataset = train_config['dataset']
         train_query_samples = train_config['query_samples']
         train_support_samples = train_config['support_samples']
@@ -85,7 +86,6 @@ def make_table_eval():
     table = pd.DataFrame(table)
     aggr_table = table.pivot_table(columns=table.columns.drop(['Test accuracy', 'Test loss']).tolist(),
                                    aggfunc={'Test accuracy': 'max', 'Test loss': 'min'})
-    print(aggr_table.T.to_markdown())
     print(aggr_table.T)
     aggr_table.T.to_csv('eval_results.csv')
 

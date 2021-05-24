@@ -36,6 +36,7 @@ class Trainer:
     eval_steps: Optional[int] = None
     epoch_steps: int = field(init=True, default=200)
     zero_shot: bool = False
+    batch_size: int = None
 
     def __post_init__(self):
         self.model = self.model.to(self.device)
@@ -60,17 +61,16 @@ class Trainer:
         X_query, y_query = batch['test']
         X_query = X_query.to(self.device)
         y_query = y_query.to(self.device)
-        with autocast():
-            if self.zero_shot:
-                classes_metadata = batch['meta']
-                classes_metadata = classes_metadata.to(self.device)
-                pred_output = self.model(classes_metadata, X_query)
-            else:
-                X_supp, y_supp = batch['train']
-                X_supp = X_supp.to(self.device)
-                y_supp = y_supp.to(self.device)
-                pred_output = self.model(X_supp, y_supp, X_query)
-            loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
+        if self.zero_shot:
+            classes_metadata = batch['meta']
+            classes_metadata = classes_metadata.to(self.device)
+            pred_output = self.model(classes_metadata, X_query)
+        else:
+            X_supp, y_supp = batch['train']
+            X_supp = X_supp.to(self.device)
+            y_supp = y_supp.to(self.device)
+            pred_output = self.model(X_supp, y_supp, X_query)
+        loss = self.calc_loss(pred_output['centroids'], pred_output['embeddings_query'], y_query)
         pred_output['loss'] = loss
         pred_output['batch'] = batch
         return pred_output
@@ -105,6 +105,7 @@ class Trainer:
         return loss_value
 
     def setup_training(self):
+        assert self.batch_size is not None
         trainer = Engine(lambda e, b: self.train_step(b))
         trainer.register_events("EVAL_DONE")
         Average(lambda o: o['loss']).attach(trainer, 'avg_loss')
@@ -115,7 +116,7 @@ class Trainer:
             checkpoint_handler.load_objects(state_vars, self.run_path / checkpoint_handler.last_checkpoint)
         trainer.add_event_handler(Events.EPOCH_COMPLETED, lambda e: checkpoint_handler(e, state_vars))
         if self.use_lr_decay:
-            trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration))
+            trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration * self.batch_size))
 
         RunningAverage(output_transform=lambda o: o['loss']).attach(trainer, 'running_avg_loss')
         ProgressBar().attach(trainer, ['running_avg_loss'])
