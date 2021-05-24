@@ -5,6 +5,7 @@ from typing import Literal, Callable, Optional
 from dataclasses import dataclass, field
 import torch
 import tensorguard as tg
+from functools import partial
 import yaml
 from path import Path
 from torchmeta.datasets.helpers import omniglot, miniimagenet, cub
@@ -21,7 +22,7 @@ from utils import set_all_seeds
 
 def distance_f(name: str) -> torch.nn.Module:
     if name == 'euclidean':
-        return torch.nn.MSELoss(reduction='none')
+        return partial(torch.cdist, p=2.0)
     elif name == 'cosine':
         return torch.nn.CosineEmbeddingLoss(reduction='none')
     else:
