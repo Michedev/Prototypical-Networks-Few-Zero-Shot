@@ -36,6 +36,9 @@ def run_evals(args):
         with open(run / 'config.yaml') as f:
             train_config = yaml.safe_load(f)
         dataset: str = train_config['dataset']
+        if args.dataset is not None and args.dataset != dataset:
+            print('skip', run, 'because evaluating only on dataset', args.dataset)
+            continue
         print('examining ', repr(run), '...', sep='')
         print('dataset', dataset)
         runs_params: List[dict] = runs_per_dataset[dataset]
@@ -95,7 +98,8 @@ cmds = {
     'make_table_eval': [make_table_eval],
     'run_evals': [run_evals,
                   [['--device'], dict(type=str, required=True, dest='device')],
-                  [['--batch-size'], dict(type=int, required=True, dest='batch_size')]
+                  [['--batch-size'], dict(type=int, required=True, dest='batch_size')],
+                  [['--dataset'], dict(required=False, default=None, choices=['miniimagenet', 'omniglot', 'cub'])]
     ]
 }
 

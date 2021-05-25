@@ -5,6 +5,7 @@ from typing import Optional, Union
 import torch
 from torch.cuda.amp import autocast
 from torch.nn.functional import one_hot
+from typing import Literal
 from ignite.contrib.handlers import ProgressBar
 import tensorguard as tg
 from ignite.engine import Engine, Events
@@ -37,8 +38,10 @@ class Trainer:
     epoch_steps: int = field(init=True, default=200)
     zero_shot: bool = False
     batch_size: int = None
+    early_stop_metric: Literal['loss', 'accuracy'] = 'accuracy'
 
     def __post_init__(self):
+        assert self.early_stop_metric in ['loss', 'accuracy']
         self.model = self.model.to(self.device)
         if self.use_lr_decay:
             self.lr_decay = torch.optim.lr_scheduler.StepLR(self.opt, self.lr_decay_steps, self.lr_decay_gamma)
@@ -87,8 +90,7 @@ class Trainer:
         num_classes = centroids.shape[1]
         centroids = centroids.unsqueeze(1)
         embeddings_query = embeddings_query.unsqueeze(2)
-        loss_matrix = self.distance_fun(centroids, embeddings_query).sum(
-            dim=-1)  # [batch_size, query_size, num_classes]
+        loss_matrix = self.distance_fun(centroids, embeddings_query)  # [batch_size, query_size, num_classes]
         tg.guard(loss_matrix, "*, QUERY_SIZE, NUM_CLASSES")
         index_correct_class = torch.arange(num_classes, device=y_query.device).view(1, 1, num_classes)
         index_correct_class = y_query.unsqueeze(-1) == index_correct_class
@@ -110,11 +112,11 @@ class Trainer:
         trainer.register_events("EVAL_DONE")
         Average(lambda o: o['loss']).attach(trainer, 'avg_loss')
         state_vars = dict(model=self.model, opt=self.opt, trainer=trainer)
-        checkpoint_handler = ModelCheckpoint(self.run_path, '', score_function=lambda e: -e.state.metrics['avg_loss'],
-                                             score_name='neg_avg_loss', n_saved=2, global_step_transform=lambda e, evt_name: e.state.epoch)
+        checkpoint_handler = ModelCheckpoint(self.run_path, '', score_function=lambda e: e.state.metrics['val_accuracy'],
+                                             score_name='val_accuracy', n_saved=2, global_step_transform=lambda e, evt_name: e.state.epoch)
         if checkpoint_handler.last_checkpoint:
             checkpoint_handler.load_objects(state_vars, self.run_path / checkpoint_handler.last_checkpoint)
-        trainer.add_event_handler(Events.EPOCH_COMPLETED, lambda e: checkpoint_handler(e, state_vars))
+        trainer.add_event_handler("EVAL_DONE", lambda e: checkpoint_handler(e, state_vars))
         if self.use_lr_decay:
             trainer.add_event_handler(Events.ITERATION_COMPLETED, lambda e: self.lr_decay.step(e.state.iteration * self.batch_size))
 
@@ -125,15 +127,25 @@ class Trainer:
         @trainer.on(Events.EPOCH_COMPLETED)
         def eval_and_log(e: Engine):
             eval_results = self.eval()
+            e.state.metrics['val_accuracy'] = eval_results['val'].metrics['accuracy'] 
+            e.state.metrics['val_loss'] = eval_results['val'].metrics['avg_loss']
             e.state.eval_results = eval_results
             e.fire_event("EVAL_DONE")
 
         if self.use_early_stop:
-            es = EarlyStopping(self.early_stop_patience, lambda e: - e.state.eval_results['val'].metrics['avg_loss'],
-                               trainer, min_delta=self.early_stop_delta)
+            es = self.make_early_stopper(trainer)
             trainer.add_event_handler("EVAL_DONE", es)
 
         return trainer
+    
+    def make_early_stopper(self, trainer):
+        if self.early_stop_metric == 'loss':
+            key_name = 'val_loss'
+        else:
+            key_name = 'val_accuracy'
+        return EarlyStopping(self.early_stop_patience, lambda e: - e.state.metrics[key_name],
+                               trainer, min_delta=self.early_stop_delta)
+
 
     def train(self):
         trainer = self.setup_training()

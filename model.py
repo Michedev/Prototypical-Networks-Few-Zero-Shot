@@ -80,7 +80,7 @@ class PrototypicalNetwork(nn.Module):
         """
         distance_matrix = distance_function(pred['embeddings_query'].unsqueeze(1), pred['centroids'].unsqueeze(2)) # [batch_size, num_classes, query_size, emb_features]
 #         tg.guard(distance_matrix, "*, NUM_CLASSES, QUERY_SIZE, NUM_FEATURES")
-        log_prob_unscaled = (- distance_matrix).sum(dim=-1)
+        log_prob_unscaled = (- distance_matrix)
         const_norm = log_prob_unscaled.logsumexp(dim=1, keepdim=True)
         log_prob = log_prob_unscaled - const_norm
         prob = log_prob.exp()

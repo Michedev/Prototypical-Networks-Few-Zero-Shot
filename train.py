@@ -22,9 +22,9 @@ from utils import set_all_seeds
 
 def distance_f(name: str) -> torch.nn.Module:
     if name == 'euclidean':
-        return partial(torch.cdist, p=2.0)
+        return lambda x1, x2: (x1 - x2).pow(2).sum(dim=-1).sqrt()
     elif name == 'cosine':
-        return torch.nn.CosineEmbeddingLoss(reduction='none')
+        return torch.nn.CosineEmbeddingLoss(reduction='none')  # todo: reimplement with lambda
     else:
         raise ValueError(name)
 
@@ -65,7 +65,7 @@ def dataset_f(args, meta_split: Literal['train', 'val', 'test'] = None):
             return cub(**dataset_kwargs)
 
 @dataclass
-class Arguments(Namespace):
+class Arguments:
     dataset: str = field(init=False)
     num_classes: int = field(init=False)
     support_samples: int = field(init=False)
@@ -88,7 +88,7 @@ class Arguments(Namespace):
     use_early_stop: bool = field(init=False)
     early_stop_patience: int = field(init=False)
     early_stop_delta: float = field(init=False)
-
+    early_stop_metric: Literal['loss', 'accuracy'] = field(init=False)
 
 def parse_args() -> Arguments:
     argparser = ArgumentParser()
@@ -144,6 +144,7 @@ def parse_args() -> Arguments:
     argparser.add_argument('--early-stop-patience', '--es-patience', dest='early_stop_patience',
                            default=3, type=int)
     argparser.add_argument('--early-stop-delta', dest='early_stop_delta', default=0.0, type=float)
+    argparser.add_argument('--early-stop-metric', default='accuracy', type=str, choices=['accuracy', 'loss'], dest='early_stop_metric')
     args = argparser.parse_args(namespace=Arguments())
 
     if args.run_path is not None:
@@ -219,6 +220,7 @@ def main():
                       zero_shot=zero_shot, use_early_stop=args.use_early_stop,
                       early_stop_delta=args.early_stop_delta,
                       early_stop_patience=args.early_stop_patience,
+                      early_stop_metric=args.early_stop_metric,
                       batch_size=args.batch_size)
     trainer.train()
 
