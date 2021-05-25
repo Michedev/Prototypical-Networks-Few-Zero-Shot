@@ -37,8 +37,7 @@ If you don't have the command _conda_ install it  from
 To reproduce the results of Zero Shot CUB dataset download the preprocessed dataset
 at this [link](https://mega.nz/file/iDpXCCaL#j5AI-LKKJqgygjIsWtBN1Ow_-yDs1f36Ki8PHtesgB0).
 
-The archive contains GoogleLeNet visual features of CUB images and class features 
-used as metadata features.
+The archive contains GoogleLeNet visual features of CUB images and class features.
 
 
 ### Resume training
