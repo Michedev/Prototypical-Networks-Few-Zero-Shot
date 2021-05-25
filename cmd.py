@@ -5,7 +5,7 @@ from typing import List
 import pandas as pd
 import yaml
 from path import Path
-from paths import RUN, ROOT
+from paths import RUN, ROOT, RESULTS
 from test import main as test_main, TestParams
 from train import distance_f
 
@@ -92,10 +92,21 @@ def make_table_eval():
                 table['Test accuracy'].append(eval_accuracy)
                 table['Test loss'].append(eval_loss)
     table = pd.DataFrame(table)
+    paper_results: pd.DataFrame = pd.read_csv(RESULTS / 'paper_results.csv')
     aggr_table = table.pivot_table(columns=table.columns.drop(['Test accuracy', 'Test loss']).tolist(),
                                    aggfunc={'Test accuracy': 'max', 'Test loss': 'min'})
-    print(aggr_table.T)
-    aggr_table.T.to_csv('eval_results.csv')
+    aggr_table = aggr_table.T.reset_index()
+    paper_results = paper_results.rename(columns=dict(Accuracy="Paper Accuracy"))
+    print(aggr_table)
+    print(paper_results)
+    aggr_table = aggr_table.merge(paper_results, 'left', ['Dataset', 'Test num classes', 'Test query samples'])
+    paper_acc = aggr_table['Paper Accuracy']; del aggr_table['Paper Accuracy']
+    aggr_table.insert(aggr_table.shape[1]-2, 'Paper Accuracy', paper_acc)
+    aggr_table['Test accuracy'] = aggr_table['Test accuracy'].apply(lambda x: "{:.2%}".format(x))
+    print(aggr_table.to_markdown(index=False))
+    with open(RESULTS / 'eval_results.md', 'w') as f:
+        f.write(aggr_table.to_markdown(index=False))
+    aggr_table.to_csv(RESULTS / 'eval_results.csv', index=False)
 
 
 cmds = {

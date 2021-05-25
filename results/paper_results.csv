@@ -1,0 +1,8 @@
+Dataset,Test num classes,Test query samples,Accuracy
+miniimagenet,5,1,49.42%
+miniimagenet,5,5,68.20%
+cub,50,10,54.60%
+omniglot,5,1,98.80%
+omniglot,5,5,99.70%
+omniglot,20,1,96.00%
+omniglot,20,5,98.90%
