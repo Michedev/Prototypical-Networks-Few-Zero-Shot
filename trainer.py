@@ -141,9 +141,11 @@ class Trainer:
     def make_early_stopper(self, trainer):
         if self.early_stop_metric == 'loss':
             key_name = 'val_loss'
+            c = -1
         else:
+            c = 1
             key_name = 'val_accuracy'
-        return EarlyStopping(self.early_stop_patience, lambda e: - e.state.metrics[key_name],
+        return EarlyStopping(self.early_stop_patience, lambda e: c * e.state.metrics[key_name],
                                trainer, min_delta=self.early_stop_delta)
 
 

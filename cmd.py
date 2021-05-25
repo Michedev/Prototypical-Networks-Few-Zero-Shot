@@ -29,7 +29,10 @@ def run_evals(args):
     """
     with open(ROOT / 'eval_dataset_runs.yaml') as f:
         runs_per_dataset = yaml.load(f)
-    for run in RUN.dirs():
+    run_list = RUN.dirs()
+    if args.most_recent_only:
+        run_list = sorted(run_list, key=lambda x: x.ctime, reverse=True)
+    for run in run_list:
         if not any(f.basename().startswith('checkpoint') for f in run.files()):
             print('skip', run)
             continue
@@ -52,6 +55,8 @@ def run_evals(args):
                                     train_config=train_config)
             print('run params:', run_params)
             test_main(run_params)
+        if args.most_recent_only:
+            break
 
 
 def make_table_eval():
@@ -99,7 +104,8 @@ cmds = {
     'run_evals': [run_evals,
                   [['--device'], dict(type=str, required=True, dest='device')],
                   [['--batch-size'], dict(type=int, required=True, dest='batch_size')],
-                  [['--dataset'], dict(required=False, default=None, choices=['miniimagenet', 'omniglot', 'cub'])]
+                  [['--dataset'], dict(required=False, default=None, choices=['miniimagenet', 'omniglot', 'cub'])],
+                  [['--most-recent-only', '--last-only'], dict(default=False, type=bool, dest='most_recent_only')]
     ]
 }
 

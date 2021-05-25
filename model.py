@@ -113,12 +113,15 @@ class PrototypicalNetworkZeroShot(nn.Module):
         self.num_classes = num_classes
         self.linear_img = nn.Linear(img_features, img_features)
         self.linear_meta = nn.Linear(meta_features, img_features)
+        self.lnorm = nn.LayerNorm(img_features)
+#         self.lnorm_q = nn.LayerNorm(img_features)
         self.eps = eps
 
     def forward(self, meta_classes, X_query):
         centroids = self.linear_meta(meta_classes)
-        centroids = centroids / (centroids.norm(2, dim=-1, keepdim=True) + self.eps)
+        centroids = self.lnorm(centroids)
         embeddings_query = self.linear_img(X_query)
+        embeddings_query = self.lnorm(embeddings_query)
         result = dict(centroids=centroids,
                     embeddings_query=embeddings_query)
         if self.get_probabilities:
