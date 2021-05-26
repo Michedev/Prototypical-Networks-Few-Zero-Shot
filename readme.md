@@ -13,9 +13,6 @@ If you don't have the command _conda_ install it  from
 
 ## Repo results
 
-- Run 600 episodes
-
-
 | Dataset      |   Train num classes |   Train support samples |   Train query samples |   Test num classes |   Test support samples |   Test query samples | Paper Accuracy   | Test accuracy   |   Test loss |
 |:-------------|--------------------:|------------------------:|----------------------:|-------------------:|-----------------------:|---------------------:|:-----------------|:----------------|------------:|
 | cub          |                  50 |                       0 |                    10 |                 50 |                      0 |                   10 | 54.60%           | 53.87%          |   13.5089   |
@@ -31,6 +28,10 @@ If you don't have the command _conda_ install it  from
 | omniglot     |                  60 |                       5 |                     5 |                  5 |                      5 |                    5 | 99.70%           | 99.65%          |    0.282353 |
 | omniglot     |                  60 |                       5 |                     5 |                 20 |                      1 |                    1 | 96.00%           | 93.55%          |    5.15215  |
 | omniglot     |                  60 |                       5 |                     5 |                 20 |                      5 |                    5 | 98.90%           | 98.84%          |    0.794082 |
+
+
+- Download [link](https://mega.nz/file/GKI1DQxb#BNIlgnbwlmwJm7IYF3gk-4agVAZZOEdauQ5PrjEL_1Y) of table checkpoints
+
 
 ### CUB Dataset
 
